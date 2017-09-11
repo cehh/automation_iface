@@ -51,7 +51,7 @@ struct ina226_rail {
 	struct power_data_sample *data;
 };
 
-int ina226_init(struct ina226_rail *rail, I2C_Handle *i2c_bus);
+int ina226_init(struct ina226_rail *rail, size_t num_rails, I2C_Handle *i2c_bus);
 int ina226_configure(struct ina226_rail *rail, I2C_Handle *i2c_bus);
 int ina226_sample_one(struct ina226_rail *rail, I2C_Handle *i2c_bus);
 int ina226_process_one(struct ina226_rail *rail, struct power_data_sample *data);

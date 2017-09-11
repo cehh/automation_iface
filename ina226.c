@@ -67,7 +67,7 @@ static int _ina226_write(I2C_Handle i2c, u8 slave_addr, u8 reg, u16 data)
 }
 
 
-int ina226_init(struct ina226_rail *rails, I2C_Handle *i2c_bus)
+int ina226_init(struct ina226_rail *rails, size_t num_rails, I2C_Handle *i2c_bus)
 {
     int i;
 	u16 data = REG_CONFIG_RESET;
@@ -79,7 +79,7 @@ int ina226_init(struct ina226_rail *rails, I2C_Handle *i2c_bus)
     config |= SAFE_SET(BUS_CONV_TIME, REG_CONFIG_VBUS_CT_MASK);
     config |= SAFE_SET(op_mode, REG_CONFIG_MODE_MASK);
 
-	for (i=0; i < ARRAY_SIZE(rails); i++) {
+	for (i=0; i < num_rails; i++) {
 	    struct ina226_rail *rail = &rails[i];
 	    struct reg_ina226 *reg = &rail->reg;
 	    int r;

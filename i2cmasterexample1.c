@@ -51,14 +51,15 @@
 
 /* Main application Definitions */
 #define MAX_MESSAGE_LEN 256
-#define TABLE_MAX_ROW 100
-#define TABLE_MAX_COL 10
-#define TABLE_MAX_ELT_LEN 50
+#define TABLE_MAX_ROW 15
+#define TABLE_MAX_COL 6
+#define TABLE_MAX_ELT_LEN 20
 
 static Display_Handle display;
 struct ina226_rail *rails = NULL;
+size_t num_rails = 0;
 I2C_Handle i2c_bus[2];
-static void algo_average_data(int num, int dur_ms);
+void algo_average_data(int num, int dur_ms);
 int autoadjust_table_init();
 void Display_table(char table[][][], u16 num_rows);
 
@@ -76,9 +77,10 @@ void setDutType(char *dut_name)
     int result;
     if (strcmp("dra71x-evm", dut_name) == 0) {
         rails = dra71x_evm_rails;
+        num_rails = ARRAY_SIZE(dra71x_evm_rails);
     }
 
-    result = ina226_init(rails, i2c_bus);
+    result = ina226_init(rails, num_rails, i2c_bus);
     if (result)
         reportError("initializing ina226s");
 }
@@ -87,7 +89,7 @@ void configureRails(int num)
 {
     int i, ret;
     char message[MAX_MESSAGE_LEN];
-    for (i=0; i < ARRAY_SIZE(rails); i++) {
+    for (i=0; i < num_rails; i++) {
         struct ina226_rail *rail = &rails[i];
         /* buffers are freed after final data processing */
         ret = ina226_alloc_data_buffers(rail, num);
@@ -112,7 +114,7 @@ void measurePower(int num, int duration_ms)
     char message[MAX_MESSAGE_LEN];
     configureRails(num);
     for (sample=0; sample < num; sample++) {
-        for (rail_idx=0; rail_idx < ARRAY_SIZE(rails); rail_idx++) {
+        for (rail_idx=0; rail_idx < num_rails; rail_idx++) {
             ret = ina226_sample_one(&rails[rail_idx], i2c_bus);
             if (ret) {
                 snprintf(message, MAX_MESSAGE_LEN, "sampling %s failed:%d\n", rails[rail_idx].name, ret);
@@ -125,12 +127,13 @@ void measurePower(int num, int duration_ms)
     algo_average_data(num, duration_ms);
 }
 
-static void algo_average_data(int num, int dur_ms)
+void algo_average_data(int num, int dur_ms)
 {
     char table[TABLE_MAX_ROW][TABLE_MAX_COL][TABLE_MAX_ELT_LEN];
+    //char table[2][TABLE_MAX_COL][TABLE_MAX_ELT_LEN];
     struct ina226_rail *rail;
     int i, row, rail_idx;
-    float current_summary_bus;
+    float current_summary_bus=0;
 
     Display_printf(display, 0, 0, "\nAverage Data Start\n");
     current_summary_bus = 0;
@@ -144,7 +147,7 @@ static void algo_average_data(int num, int dur_ms)
     strncpy(table[row][4], "Current(mA)", TABLE_MAX_ELT_LEN);
     strncpy(table[row][5], "Power(mW)", TABLE_MAX_ELT_LEN);
     row++;
-    for (rail_idx=0; rail_idx < ARRAY_SIZE(rails); rail_idx++) {
+    for (rail_idx=0; rail_idx < num_rails; rail_idx++) {
             rail = &rails[rail_idx];
 
             struct power_data_sample *data = rail->data;
@@ -249,10 +252,10 @@ void *mainThread(void *arg0)
     i2c_bus[1] = I2C_open(Board_I2C1, &i2cParams);
 
     if (i2c_bus[0] == NULL || i2c_bus[1] == NULL) {
-        Display_printf(display, 0, 0, "Error Initializing I2C!\n");
+        Display_printf(display, 0, 0, "Error Initializing I2C!");
     }
     else {
-        Display_printf(display, 0, 0, "I2C Initialized!\n");
+        Display_printf(display, 0, 0, "I2C Initialized!");
     }
 
     setDutType("dra71x-evm");
