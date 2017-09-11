@@ -47,40 +47,14 @@ struct ina226_rail {
     u8	  i2c_bus_index;
     u8	  i2c_slave_addr;
 	float shunt_resistor_value;
-
-	/* internal */
 	struct reg_ina226 reg;
 	struct power_data_sample *data;
 };
 
 int ina226_init(struct ina226_rail *rail, I2C_Handle *i2c_bus);
-
-
-
-
-
-
-int ina226_detect(struct ina226_rail *rail);
-
-int ina226_configure(struct ina226_rail *rail);
-int ina226_sample_one(struct ina226_rail *rail);
+int ina226_configure(struct ina226_rail *rail, I2C_Handle *i2c_bus);
+int ina226_sample_one(struct ina226_rail *rail, I2C_Handle *i2c_bus);
 int ina226_process_one(struct ina226_rail *rail, struct power_data_sample *data);
-
-int ina226_parse_config(struct ina226_rail *rail,
-				char *param,
-				void *data);
-
-struct ina226_rail *ina226_find(
-		struct ina226_rail *root_rail,
-		const char *rail_name);
-struct ina226_rail *ina226_find_or_allocate(
-		struct ina226_rail **root_rail,
-		const char *rail_name);
 int ina226_alloc_data_buffers(struct ina226_rail *rail, int num);
-void ina226_free(struct ina226_rail *rail);
 
-struct pm_bus;
-int ina226_bus_init_i2c(struct pm_bus *bus);
-void ina226_bus_deinit_i2c(struct pm_bus *node);
-int ina226_bus_setup(struct ina226_rail *rail);
 #endif	/* __INA226__ */

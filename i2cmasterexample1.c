@@ -30,17 +30,17 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- *    ======== i2cmasterexample1.c ========
- */
+
 #include <stdint.h>
 #include <stddef.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdio.h>
 
 /* Driver Header files */
 #include <ti/drivers/I2C.h>
 #include <ti/display/Display.h>
+#include <ti/sysbios/knl/Task.h>
 
 /* Example/Board Header files */
 #include "Board.h"
@@ -49,10 +49,18 @@
 #include "dra71x_evm.h"
 #include "ina226_reg_defns.h"
 
+/* Main application Definitions */
+#define MAX_MESSAGE_LEN 256
+#define TABLE_MAX_ROW 100
+#define TABLE_MAX_COL 10
+#define TABLE_MAX_ELT_LEN 50
+
 static Display_Handle display;
 struct ina226_rail *rails = NULL;
 I2C_Handle i2c_bus[2];
-
+static void algo_average_data(int num, int dur_ms);
+int autoadjust_table_init();
+void Display_table(char table[][][], u16 num_rows);
 
 void reportError(char *message)
 {
@@ -72,81 +80,155 @@ void setDutType(char *dut_name)
 
     result = ina226_init(rails, i2c_bus);
     if (result)
-        reportError("initializing ina226s")
+        reportError("initializing ina226s");
 }
 
 void configureRails(int num)
 {
-    char message[256];
-    for (int i=0; i < ARRAY_SIZE(rails); i++) {
-        struct ina226_rail rail = rails[i];
+    int i, ret;
+    char message[MAX_MESSAGE_LEN];
+    for (i=0; i < ARRAY_SIZE(rails); i++) {
+        struct ina226_rail *rail = &rails[i];
         /* buffers are freed after final data processing */
         ret = ina226_alloc_data_buffers(rail, num);
         if (ret) {
-            snprintf(message, 256, "alloc %s failed:%d\n", rail->name, ret);
-            reportError(message)
+            snprintf(message, MAX_MESSAGE_LEN, "allocating %s failed:%d\n", rail->name, ret);
+            reportError(message);
         }
 
-        ret = ina226_configure(rail);
+        ret = ina226_configure(rail, i2c_bus);
         if (ret) {
-            snprintf(message, 256, "configure %s failed:%d\n", rail->name, ret);
-            reportError(message)
+            snprintf(message, MAX_MESSAGE_LEN, "configuring %s failed:%d\n", rail->name, ret);
+            reportError(message);
         }
 
     }
 }
 
 
-void measurePower(int num)
+void measurePower(int num, int duration_ms)
 {
-    configureRails(int num);
-
+    int sample, rail_idx, ret;
+    char message[MAX_MESSAGE_LEN];
+    configureRails(num);
+    for (sample=0; sample < num; sample++) {
+        for (rail_idx=0; rail_idx < ARRAY_SIZE(rails); rail_idx++) {
+            ret = ina226_sample_one(&rails[rail_idx], i2c_bus);
+            if (ret) {
+                snprintf(message, MAX_MESSAGE_LEN, "sampling %s failed:%d\n", rails[rail_idx].name, ret);
+                reportError(message);
+            }
+            ina226_process_one(&rails[rail_idx], &(rails[rail_idx].data[sample]));
+        }
+        Task_sleep(duration_ms);
+    }
+    algo_average_data(num, duration_ms);
 }
 
-void writeReg(I2C_Handle i2c, u8 slave_addr, u8 reg, u16 data)
+static void algo_average_data(int num, int dur_ms)
 {
-    I2C_Transaction i2cTransaction;
-    u8 txdata[3];
-    bool status = false;
+    char table[TABLE_MAX_ROW][TABLE_MAX_COL][TABLE_MAX_ELT_LEN];
+    struct ina226_rail *rail;
+    int i, row, rail_idx;
+    float current_summary_bus;
 
-    txdata[0] = reg;
-    txdata[1] = (data & 0xFF00) >> 8;
-    txdata[2] = (data & 0xFF);
-    i2cTransaction.slaveAddress = slave_addr;
-    i2cTransaction.writeBuf = txdata;
-    i2cTransaction.writeCount = 3;
-    i2cTransaction.readBuf = NULL;
-    i2cTransaction.readCount = 0;
-    status = I2C_transfer(i2c, &i2cTransaction);
-    if (status) {
-        Display_printf(display, 0, 0, "%d written to device:%d register:%d\n", data, slave_addr, reg);
+    Display_printf(display, 0, 0, "\nAverage Data Start\n");
+    current_summary_bus = 0;
+    autoadjust_table_init(table);
+    Display_printf(display, 0, 0,  "AVG(Samples=%d, Interval=%d ms)", num, dur_ms);
+    row = 0;
+    strncpy(table[row][0], "Index", TABLE_MAX_ELT_LEN);
+    strncpy(table[row][1], "Rail Name", TABLE_MAX_ELT_LEN);
+    strncpy(table[row][2], "Shunt voltage(uV)", TABLE_MAX_ELT_LEN);
+    strncpy(table[row][3], "Rail voltage(V)", TABLE_MAX_ELT_LEN);
+    strncpy(table[row][4], "Current(mA)", TABLE_MAX_ELT_LEN);
+    strncpy(table[row][5], "Power(mW)", TABLE_MAX_ELT_LEN);
+    row++;
+    for (rail_idx=0; rail_idx < ARRAY_SIZE(rails); rail_idx++) {
+            rail = &rails[rail_idx];
+
+            struct power_data_sample *data = rail->data;
+            struct power_data_sample avg_sample = { 0 };
+
+            for (i = 0; i < num; i++, data++) {
+                avg_sample.shunt_uV =
+                    ((avg_sample.shunt_uV * i) +
+                     data->shunt_uV) / (i + 1);
+                avg_sample.rail_uV =
+                    ((avg_sample.rail_uV * i) +
+                     data->rail_uV) / (i + 1);
+                avg_sample.current_mA =
+                    ((avg_sample.current_mA * i) +
+                     data->current_mA) / (i + 1);
+                avg_sample.power_mW =
+                    ((avg_sample.power_mW * i) +
+                     data->power_mW) / (i + 1);
+            }
+            snprintf(table[row][0], TABLE_MAX_ELT_LEN, "%d", rail_idx);
+            snprintf(table[row][1], TABLE_MAX_ELT_LEN, "%s",
+                 rail->name);
+            snprintf(table[row][2], TABLE_MAX_ELT_LEN, "%3.2f",
+                 avg_sample.shunt_uV);
+            snprintf(table[row][3], TABLE_MAX_ELT_LEN, "%3.6f",
+                 avg_sample.rail_uV / 1000000);
+            snprintf(table[row][4], TABLE_MAX_ELT_LEN, "%3.2f",
+                 avg_sample.current_mA);
+            snprintf(table[row][5], TABLE_MAX_ELT_LEN, "%3.2f",
+                 avg_sample.power_mW);
+            row++;
+
+            current_summary_bus += avg_sample.power_mW;
+    }
+
+        snprintf(table[row][0], TABLE_MAX_ELT_LEN, "---");
+        snprintf(table[row][1], TABLE_MAX_ELT_LEN, "---");
+        snprintf(table[row][2], TABLE_MAX_ELT_LEN, "---");
+        snprintf(table[row][3], TABLE_MAX_ELT_LEN, "---");
+        snprintf(table[row][4], TABLE_MAX_ELT_LEN, "---");
+        snprintf(table[row][5], TABLE_MAX_ELT_LEN, "---");
+        row++;
+        snprintf(table[row][0], TABLE_MAX_ELT_LEN, "Total");
+        snprintf(table[row][5], TABLE_MAX_ELT_LEN, "%3.2f",
+             current_summary_bus);
+        row++;
+        Display_table(table, row);
+    return;
+}
+
+int autoadjust_table_init(
+    char table[TABLE_MAX_ROW][TABLE_MAX_COL][TABLE_MAX_ELT_LEN])
+{
+    unsigned int col, row;
+
+    if (table == NULL) {
+        printf("autoadjust_table_init() error: table == NULL!\n");
+        return -1;
+    }
+
+    for (row = 0; row < TABLE_MAX_ROW; row++)
+        for (col = 0; col < TABLE_MAX_COL; col++)
+            table[row][col][0] = '\0';
+
+    return 0;
+}
+
+void Display_table(
+        char table[TABLE_MAX_ROW][TABLE_MAX_COL][TABLE_MAX_ELT_LEN],
+        u16 num_rows)
+{
+    int row;
+    for (row=0; row < num_rows; row++) {
+        Display_printf(display, 0, 0, "| %s | %s | %s | %s | %s | %s |",
+                       table[row][0], table[row][1], table[row][2],
+                       table[row][3], table[row][4], table[row][5]);
     }
 }
-
-void readReg(I2C_Handle i2c, u8 slave_addr, u8 reg, u16 *data)
-{
-    I2C_Transaction i2cTransaction;
-    bool status = false;
-    i2cTransaction.slaveAddress = slave_addr;
-    i2cTransaction.writeBuf = &reg;
-    i2cTransaction.writeCount = 1;
-    i2cTransaction.readBuf = data;
-    i2cTransaction.readCount = 2;
-    status = I2C_transfer(i2c, &i2cTransaction);
-    if (status) {
-        *data = FLIP_BYTES(*data);
-        Display_printf(display, 0, 0, "%d read from device:%d register:%d\n", *data, slave_addr, reg);
-    }
-}
-
 /*
  *  ======== mainThread ========
  */
 void *mainThread(void *arg0)
 {
-    I2C_Handle      i2c;
     I2C_Params      i2cParams;
-    u16 data;
 
     /* Call driver init functions */
     Display_init();
@@ -164,7 +246,7 @@ void *mainThread(void *arg0)
     i2cParams.bitRate = I2C_100kHz;
 
     i2c_bus[0] = I2C_open(Board_I2C0, &i2cParams);
-    i2c_bus[1] = I2C_open(Board_I2C0, &i2cParams);
+    i2c_bus[1] = I2C_open(Board_I2C1, &i2cParams);
 
     if (i2c_bus[0] == NULL || i2c_bus[1] == NULL) {
         Display_printf(display, 0, 0, "Error Initializing I2C!\n");
@@ -172,6 +254,9 @@ void *mainThread(void *arg0)
     else {
         Display_printf(display, 0, 0, "I2C Initialized!\n");
     }
+
+    setDutType("dra71x-evm");
+    measurePower(10, 10);
 
 
 /*
@@ -215,7 +300,8 @@ void *mainThread(void *arg0)
     Display_printf(display, 0, 0, "Got I2C data!\n");
 */
     /* Deinitialized I2C */
-    I2C_close(i2c);
+    I2C_close(i2c_bus[0]);
+    I2C_close(i2c_bus[1]);
     Display_printf(display, 0, 0, "I2C closed!\n");
 
     return (0);

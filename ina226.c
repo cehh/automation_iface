@@ -17,18 +17,18 @@
 
 #include <ctype.h>
 #include <errno.h>
-//#include <getopt.h>
-#include <i2c-wrap.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-//#include <version.h>
 
-//#include "pm_bus.h"
-#include "ina226.h"
+/* Driver Header files */
+#include <ti/drivers/I2C.h>
+#include <ti/display/Display.h>
+
 #include "ina226_reg_defns.h"
 #include "power_data.h"
+#include "ina226.h"
 
 
 static int _ina226_read(I2C_Handle i2c, u8 slave_addr, u8 reg, u16 *data)
@@ -43,7 +43,6 @@ static int _ina226_read(I2C_Handle i2c, u8 slave_addr, u8 reg, u16 *data)
     status = I2C_transfer(i2c, &i2cTransaction);
     if (status) {
         *data = FLIP_BYTES(*data);
-        Display_printf(display, 0, 0, "%d read from device:%d register:%d\n", *data, slave_addr, reg);
     }
     return !status;
 }
@@ -64,15 +63,13 @@ static int _ina226_write(I2C_Handle i2c, u8 slave_addr, u8 reg, u16 data)
     i2cTransaction.readBuf = NULL;
     i2cTransaction.readCount = 0;
     status = I2C_transfer(i2c, &i2cTransaction);
-    if (status) {
-        Display_printf(display, 0, 0, "%d written to device:%d register:%d\n", data, slave_addr, reg);
-    }
     return !status;
 }
 
 
 int ina226_init(struct ina226_rail *rails, I2C_Handle *i2c_bus)
 {
+    int i;
 	u16 data = REG_CONFIG_RESET;
 	u16 timeout = 10000;
 	u8 op_mode = CONFIG_MODE_CONTINOUS(CONFIG_MODE_V_BUS_VOLT |
@@ -82,19 +79,19 @@ int ina226_init(struct ina226_rail *rails, I2C_Handle *i2c_bus)
     config |= SAFE_SET(BUS_CONV_TIME, REG_CONFIG_VBUS_CT_MASK);
     config |= SAFE_SET(op_mode, REG_CONFIG_MODE_MASK);
 
-	for (int i=0; i < ARRAY_SIZE(rails); i++) {
-	    struct ina226_rail rail = rails[i];
+	for (i=0; i < ARRAY_SIZE(rails); i++) {
+	    struct ina226_rail *rail = &rails[i];
 	    struct reg_ina226 *reg = &rail->reg;
 	    int r;
 	    float cal_val;
         /* ONLY DO reset here - no other reg access please */
-        r = _ina226_write(i2c_bus[rail.i2c_bus_index], rail.i2c_slave_addr, REG_CONFIG, data);
+        r = _ina226_write(i2c_bus[rail->i2c_bus_index], rail->i2c_slave_addr, REG_CONFIG, data);
         if (r)
             return r;
 
         while (data & REG_CONFIG_RESET) {
             /* Usually exits in a single iteration */
-            r = _ina226_read(i2c_bus[rail.i2c_bus_index], rail.i2c_slave_addr, REG_CONFIG, &data);
+            r = _ina226_read(i2c_bus[rail->i2c_bus_index], rail->i2c_slave_addr, REG_CONFIG, &data);
             if (r)
                 return r;
             timeout--;
@@ -124,106 +121,82 @@ int ina226_init(struct ina226_rail *rails, I2C_Handle *i2c_bus)
 	return 0;
 }
 
-int ina226_detect(struct ina226_rail *rail)
+
+int ina226_alloc_data_buffers(struct ina226_rail *rail, int num)
 {
-	/* Am I there? I should have a DIEID register.. */
-	return _ina226_read(rail->i2c_fd, REG_DIEID, &rail->die_id);
+    if (rail->data)
+        free(rail->data);
+
+    rail->data = malloc(sizeof(*(rail->data)) * num);
+
+    if (!rail->data)
+        return -ENOMEM;
+    return 0;
 }
 
-int ina226_configure(struct ina226_rail *rail)
+
+int ina226_configure(struct ina226_rail *rail, I2C_Handle *i2c_bus)
 {
-	int r;
-	struct reg_ina226 *reg = &rail->reg;
+    int r;
+    struct reg_ina226 *reg = &rail->reg;
 
-	r = _ina226_write(rail->i2c_fd, REG_CONFIG, reg->config);
-	if (r)
-		return r;
-	r = _ina226_write(rail->i2c_fd, REG_CAL, reg->cal);
-	if (r)
-		return r;
+    r = _ina226_write(i2c_bus[rail->i2c_bus_index], rail->i2c_slave_addr, REG_CONFIG, reg->config);
+    if (r)
+        return r;
+    r = _ina226_write(i2c_bus[rail->i2c_bus_index], rail->i2c_slave_addr, REG_CAL, reg->cal);
+    if (r)
+        return r;
 
-	return 0;
+    return 0;
 }
 
-int ina226_sample_one(struct ina226_rail *rail)
+
+int ina226_sample_one(struct ina226_rail *rail, I2C_Handle *i2c_bus)
 {
-	int r;
-	struct reg_ina226 *reg = &rail->reg;
+    int r;
+    struct reg_ina226 *reg = &rail->reg;
 
-	r = _ina226_read(rail->i2c_fd, REG_SHUNT, &reg->shunt);
-	if (r)
-		return r;
+    r = _ina226_read(i2c_bus[rail->i2c_bus_index], rail->i2c_slave_addr, REG_SHUNT, &reg->shunt);
+    if (r)
+        return r;
 
-	r = _ina226_read(rail->i2c_fd, REG_BUS, &reg->bus);
-	if (r)
-		return r;
+    r = _ina226_read(i2c_bus[rail->i2c_bus_index], rail->i2c_slave_addr, REG_BUS, &reg->bus);
+    if (r)
+        return r;
 
-	r = _ina226_read(rail->i2c_fd, REG_POWER, &reg->power);
-	if (r)
-		return r;
+    r = _ina226_read(i2c_bus[rail->i2c_bus_index], rail->i2c_slave_addr, REG_POWER, &reg->power);
+    if (r)
+        return r;
 
-	r = _ina226_read(rail->i2c_fd, REG_CURRENT, &reg->current);
+    r = _ina226_read(i2c_bus[rail->i2c_bus_index], rail->i2c_slave_addr, REG_CURRENT, &reg->current);
 
-	return r;
+    return r;
 }
+
 
 static s16 convert_to_decimal(u16 x)
 {
-	u16 m = x >> 16;
-	return (~m & x) | (((x & 0x8000) - x) & m);
+    u16 m = x >> 16;
+    return (~m & x) | (((x & 0x8000) - x) & m);
 }
+
 
 int ina226_process_one(struct ina226_rail *rail, struct power_data_sample *data)
 {
-	struct reg_ina226 *reg = &rail->reg;
+    struct reg_ina226 *reg = &rail->reg;
 
-	data->shunt_uV =
-	    ((float)convert_to_decimal(reg->shunt & REG_SHUNT_MASK)) *
-	    REG_SHUNT_UV_PER_LSB;
+    data->shunt_uV =
+        ((float)convert_to_decimal(reg->shunt & REG_SHUNT_MASK)) *
+        REG_SHUNT_UV_PER_LSB;
 
-	data->rail_uV = ((float)(reg->bus & REG_BUS_MASK)) * REG_BUS_UV_PER_LSB;
+    data->rail_uV = ((float)(reg->bus & REG_BUS_MASK)) * REG_BUS_UV_PER_LSB;
 
-	data->current_mA =
-	    ((float)convert_to_decimal(reg->current & REG_CURRENT_MASK)) *
-	    CURRENT_LSB * 1000;
+    data->current_mA =
+        ((float)convert_to_decimal(reg->current & REG_CURRENT_MASK)) *
+        CURRENT_LSB * 1000;
 
-	data->power_mW =
-	    ((float)(reg->power & REG_POWER_MASK)) * POWER_LSB * 1000;
+    data->power_mW =
+        ((float)(reg->power & REG_POWER_MASK)) * POWER_LSB * 1000;
 
-	return 0;
+    return 0;
 }
-
-/*
-int ina226_bus_init_i2c(struct pm_bus *bus)
-{
-	int ret;
-	void *fd;
-	struct ina226_rail *rail = bus->rail;
-
-	ret = i2c_bus_init(bus->i2c_bus, &fd);
-	if (ret < 0)
-		return ret;
-
-	bus->i2c_fd = fd;
-
-	if (!rail)
-		return 0;
-
-	while (rail) {
-		rail->i2c_fd = bus->i2c_fd;
-		rail = rail->next;
-	}
-
-	return 0;
-}
-
-void ina226_bus_deinit_i2c(struct pm_bus *bus)
-{
-	i2c_bus_deinit(bus->i2c_fd);
-}
-
-int ina226_bus_setup(struct ina226_rail *rail)
-{
-	return i2c_set_slave(rail->i2c_fd, rail->i2c_slave_addr, 1);
-}
-*/

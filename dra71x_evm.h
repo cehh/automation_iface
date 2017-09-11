@@ -33,20 +33,20 @@
 #ifndef DRA71X_EVM_H_
 #define DRA71X_EVM_H_
 
-#include "ina226.h"
 #include "power_data.h"
+#include "ina226.h"
 
-ina226_rail dra71x_evm_rails[] = {
-    { .name = "vdd_core",     .i2c_bux_index = 0, .i2c_slave_addr = 0x44, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vdd_dsp",      .i2c_bux_index = 0, .i2c_slave_addr = 0x45, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vdds_1v8",     .i2c_bux_index = 0, .i2c_slave_addr = 0x46, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vdd_ddr_1v35", .i2c_bux_index = 0, .i2c_slave_addr = 0x47, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vda_1v8_pll",  .i2c_bux_index = 0, .i2c_slave_addr = 0x48, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vda_1v8_phy",  .i2c_bux_index = 0, .i2c_slave_addr = 0x49, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vddshv8",      .i2c_bux_index = 0, .i2c_slave_addr = 0x4a, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vdda_usb3v3",  .i2c_bux_index = 0, .i2c_slave_addr = 0x4b, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vddshv_3v3",   .i2c_bux_index = 0, .i2c_slave_addr = 0x4c, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vdd_ddr",      .i2c_bux_index = 1, .i2c_slave_addr = 0x43, .shunt_resistor_value = 0.010, .reg={}}
-}
+struct ina226_rail dra71x_evm_rails[] = {
+    { .name = "vdd_core",     .i2c_bus_index = 0, .i2c_slave_addr = 0x44, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_dsp",      .i2c_bus_index = 0, .i2c_slave_addr = 0x45, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdds_1v8",     .i2c_bus_index = 0, .i2c_slave_addr = 0x46, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_ddr_1v35", .i2c_bus_index = 0, .i2c_slave_addr = 0x47, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_1v8_pll",  .i2c_bus_index = 0, .i2c_slave_addr = 0x48, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_1v8_phy",  .i2c_bus_index = 0, .i2c_slave_addr = 0x49, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vddshv8",      .i2c_bus_index = 0, .i2c_slave_addr = 0x4a, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdda_usb3v3",  .i2c_bus_index = 0, .i2c_slave_addr = 0x4b, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vddshv_3v3",   .i2c_bus_index = 0, .i2c_slave_addr = 0x4c, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_ddr",      .i2c_bus_index = 1, .i2c_slave_addr = 0x43, .shunt_resistor_value = 0.010, .reg={}}
+};
 
 #endif /* DRA71X_EVM_H_ */

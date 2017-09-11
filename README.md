@@ -2,6 +2,7 @@
 
 Application to control TI's EVMs using automation interface header.
 Requires TI RTOS.
+INA226 code heavily based on https://github.com/nmenon/powertool
 
 ## Peripherals Exercised
 
