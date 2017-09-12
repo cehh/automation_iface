@@ -36,10 +36,12 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 /* Driver Header files */
 #include <ti/drivers/I2C.h>
-#include <ti/display/Display.h>
+#include <ti/drivers/GPIO.h>
+#include <ti/drivers/UART.h>
 #include <ti/sysbios/knl/Task.h>
 
 /* Example/Board Header files */
@@ -54,18 +56,123 @@
 #define TABLE_MAX_ROW 15
 #define TABLE_MAX_COL 6
 #define TABLE_MAX_ELT_LEN 20
+#define BUFF_LENGTH (128)
 
-static Display_Handle display;
-struct ina226_rail *rails = NULL;
-size_t num_rails = 0;
-I2C_Handle i2c_bus[2];
+static void clearBuffer();
+static void printMsg(char msg[]);
 void algo_average_data(int num, int dur_ms);
 int autoadjust_table_init();
 void Display_table(char table[][][], u16 num_rows);
+void Display_printf(char *fmt, ...);
+
+UART_Handle uart;
+I2C_Handle i2c_bus[2];
+char echoPrompt[] = "=>\r\n";
+char max_len_msg[] = "Max string length reached, resetting ....\r\n";
+static int rBytes = 0;
+static int set_dut = 0;
+static char rBuff[BUFF_LENGTH];
+char *rbuffp = rBuff;
+struct ina226_rail *rails = NULL;
+size_t num_rails = 0;
+
+
+void clearBuffer()
+{
+    int i;
+    printMsg(echoPrompt);
+    for(i = 0; i < BUFF_LENGTH; i++)rBuff[i] = 0;
+    rBytes = 0;
+    rbuffp = rBuff;
+}
+
+void printHelp()
+{
+  printMsg("\t mmc <l-microsd|r-microsd>\t\t:connect to left-microsd or right-microsd");
+  printMsg("\t auto reset\t\t\t\t:warm reset DUT");
+  printMsg("\t auto por\t\t\t\t:power on reset DUT");
+  printMsg("\t auto power <on|off>\t\t\t:power on|off DUT");
+  printMsg("\t auto sysboot <setting>\t\t\t:e.g. 110000");
+  printMsg("\t auto set dut <DUT type>\t\t\t:initialize i2c based on DUT type");
+  printMsg("\t auto measure power <samples> <inter-sample delay (ms)>\t:Measure DUT power");
+  printMsg("\t help\t\t\t\t\t:print this menu");
+}
+
+void printError(char *cmd)
+{
+  char msg[BUFF_LENGTH] = {0};
+  strcat(msg, "Command ");
+  strcat(msg, cmd);
+  strcat(msg, " not valid ...");
+  printMsg(msg);
+  printHelp();
+}
+
+void printMsg(char *msg)
+{
+    UART_write(uart, msg, strlen(msg));
+    UART_write(uart, "\r\n", 2);
+}
+
+int getSysbootPin(int pin) {
+    switch(pin) {
+        case 0:
+            return 40;
+        case 1:
+            return 39;
+        case 2:
+            return 38;
+        case 3:
+            return 37;
+        case 4:
+            return 34;
+        case 5:
+        default:
+            return 33;
+    }
+}
+
+char *trimSpaces(char *str)
+{
+  char *end;
+
+  // Trim leading space
+  while(isspace((unsigned char)*str)) str++;
+
+  if(*str == 0)  // All spaces?
+    return str;
+
+  // Trim trailing space
+  end = str + strlen(str) - 1;
+  while(end > str && isspace((unsigned char)*end)) end--;
+
+  // Write new null terminator
+  *(end+1) = 0;
+
+  return str;
+}
+
+int startsWith(char *str, char *substr)
+{
+    size_t sub_len = strlen(substr);
+    return (strncmp(str, substr, sub_len) == 0);
+}
+
+void bootMode(char *mode)
+{
+    int i;
+    for (i=0; i < 6; i++) {
+        if ( *(mode + i) == '1' ) {
+            //digitalWrite(getSysbootPin(5-i), HIGH);
+        } else {
+            //digitalWrite(getSysbootPin(5-i), LOW);
+        }
+    }
+}
 
 void reportError(char *message)
 {
-    Display_printf(display, 0, 0, "ERROR: %s\n", message);
+    Display_printf("ERROR: %s\n", message);
 }
 
 /*
@@ -78,6 +185,10 @@ void setDutType(char *dut_name)
     if (strcmp("dra71x-evm", dut_name) == 0) {
         rails = dra71x_evm_rails;
         num_rails = ARRAY_SIZE(dra71x_evm_rails);
+    }
+    else {
+        set_dut = 0;
+        Display_printf("Error: Unsupported DUT %s", dut_name);
     }
 
     result = ina226_init(rails, num_rails, i2c_bus);
@@ -135,10 +246,10 @@ void algo_average_data(int num, int dur_ms)
     int i, row, rail_idx;
     float current_summary_bus=0;
 
-    Display_printf(display, 0, 0, "\nAverage Data Start\n");
+    Display_printf("\nAverage Data Start\n");
     current_summary_bus = 0;
     autoadjust_table_init(table);
-    Display_printf(display, 0, 0,  "AVG(Samples=%d, Interval=%d ms)", num, dur_ms);
+    Display_printf( "AVG(Samples=%d, Interval=%d ms)", num, dur_ms);
     row = 0;
     strncpy(table[row][0], "Index", TABLE_MAX_ELT_LEN);
     strncpy(table[row][1], "Rail Name", TABLE_MAX_ELT_LEN);
@@ -215,33 +326,68 @@ int autoadjust_table_init(
     return 0;
 }
 
+void Display_printf(char *fmt, ...)
+{
+    char msg[BUFF_LENGTH] = {0};
+    char *msgp = msg;
+    int ret;
+    va_list va;
+    va_start(va, fmt);
+    ret = vsnprintf(msgp, BUFF_LENGTH, fmt, va);
+    if (ret > 0)
+        printMsg(msgp);
+}
+
 void Display_table(
         char table[TABLE_MAX_ROW][TABLE_MAX_COL][TABLE_MAX_ELT_LEN],
         u16 num_rows)
 {
     int row;
     for (row=0; row < num_rows; row++) {
-        Display_printf(display, 0, 0, "| %s | %s | %s | %s | %s | %s |",
+        Display_printf("| %s | %s | %s | %s | %s | %s |",
                        table[row][0], table[row][1], table[row][2],
                        table[row][3], table[row][4], table[row][5]);
     }
 }
+
+void cleanup()
+{
+    /* Deinitialized I2C */
+    I2C_close(i2c_bus[0]);
+    I2C_close(i2c_bus[1]);
+    Display_printf("I2C closed!\n");
+}
+
 /*
  *  ======== mainThread ========
  */
 void *mainThread(void *arg0)
 {
+    UART_Params uartParams;
     I2C_Params      i2cParams;
+    unsigned int i;
 
     /* Call driver init functions */
-    Display_init();
     I2C_init();
+    GPIO_init();
+    UART_init();
 
-    /* Open the HOST display for output */
-    display = Display_open(Display_Type_UART, NULL);
-    if (display == NULL) {
+    /* Create a UART with data processing off. */
+    UART_Params_init(&uartParams);
+    uartParams.writeDataMode = UART_DATA_BINARY;
+    uartParams.readDataMode = UART_DATA_BINARY;
+    uartParams.readReturnMode = UART_RETURN_FULL;
+    uartParams.readEcho = UART_ECHO_OFF;
+    uartParams.baudRate = 115200;
+
+    uart = UART_open(Board_UART0, &uartParams);
+
+    if (uart == NULL) {
+        /* UART_open() failed */
         while (1);
     }
+
+    clearBuffer();
 
     /* Create I2C for usage */
     I2C_Params_init(&i2cParams);
@@ -252,60 +398,136 @@ void *mainThread(void *arg0)
     i2c_bus[1] = I2C_open(Board_I2C1, &i2cParams);
 
     if (i2c_bus[0] == NULL || i2c_bus[1] == NULL) {
-        Display_printf(display, 0, 0, "Error Initializing I2C!");
+        Display_printf("Error Initializing I2C!");
     }
     else {
-        Display_printf(display, 0, 0, "I2C Initialized!");
+        Display_printf("I2C Initialized!");
     }
 
-    setDutType("dra71x-evm");
-    measurePower(10, 10);
 
 
-/*
-    float cal_val;
-    float max_current_A;
-    struct ina226_rail myrail;
-    struct ina226_rail *rail = &myrail;
-    struct reg_ina226 *reg = &rail->reg;
+    /* Loop forever echoing */
+    while (1) {
+        while (1) {
+            UART_read(uart, rbuffp + rBytes, 1);
+            UART_write(uart, rbuffp + rBytes, 1);
 
-    writeReg(i2c, 0x44, 0x0, (0x1 << 15));
-    rail->shunt_conv_time = 4;
-    rail->bus_conv_time = 4;
-    rail->shunt_resistor_accuracy = 5;
-    rail->num_avgs = 0;
-    rail->shunt_resistor_value = 0.010;
-    max_current_A = REG_MAX_EXP_CURRENT;
-    rail->current_lsb_A = max_current_A / (float) 32768;
-    rail->power_lsb = rail->current_lsb_A * REG_POWER_LSB_RATIO;
-    rail->op_mode = CONFIG_MODE_CONTINOUS(CONFIG_MODE_V_BUS_VOLT |
-                          CONFIG_MODE_V_SHUNT_VOLT);
+            if (rBytes == BUFF_LENGTH) {
+                printMsg(max_len_msg);
+                clearBuffer();
 
-    reg->config = SAFE_SET(rail->num_avgs, REG_CONFIG_AVG_MASK);
-    reg->config |= SAFE_SET(rail->shunt_conv_time, REG_CONFIG_VSH_CT_MASK);
-    reg->config |= SAFE_SET(rail->bus_conv_time, REG_CONFIG_VBUS_CT_MASK);
-    reg->config |= SAFE_SET(rail->op_mode, REG_CONFIG_MODE_MASK);
-    cal_val = REG_CAL_VAL_CONST;
-    cal_val /= rail->current_lsb_A * rail->shunt_resistor_value;
+            } else if(rBuff[rBytes] == 13 || rBuff[rBytes] == 10) {
+                printMsg("");
+                break;
 
-    if (cal_val > (float)REG_CAL_MASK)
-        reg->cal = REG_CAL_MASK;
-    else
-        reg->cal = ((u16) cal_val) & REG_CAL_MASK;
+            } else if(rBytes > 0 && (rBuff[rBytes] == 8 || rBuff[rBytes] == 127)) {
+                rBuff[rBytes] = 0;
+                rBytes -= 1;
 
-    writeReg(i2c, 0x44, 0x0, reg->config);
-    writeReg(i2c, 0x44, 0x5, reg->cal);
-    for (i = 0x0; i < 7; i++) {
-        readReg(i2c, 0x44, i, &data);
+            } else if(rBuff[rBytes] == 27 || rBuff[rBytes] == 3) {
+                printMsg("^C");
+                clearBuffer();
+            } else {
+                rBytes += 1;
+                Task_sleep(10);
+            }
+        }
+
+        if (rBytes >= 0) {
+            rBytes = 0;
+            rbuffp = trimSpaces(rbuffp);
+            for (i=0; *(rbuffp + i); ++i) *(rbuffp + i) = tolower((int) *(rbuffp + i)); // toLowerCase
+
+            if (startsWith(rbuffp, "mmc ")) {
+                rbuffp += 4;
+                rbuffp = trimSpaces(rbuffp);
+                if (startsWith(rbuffp, "l-microsd")) {
+                    printMsg("Using Left microSD connection");
+                    //digitalWrite(MUX_SELECT, HIGH);
+                    //digitalWrite(MUX_R_MICROSD_LED, LOW);
+                    //digitalWrite(MUX_L_MICROSD_LED, HIGH);
+                }
+                else if (startsWith(rbuffp, "r-microsd")) {
+                    printMsg("Using Right microSD connection");
+                    //digitalWrite(MUX_SELECT, LOW);
+                    //digitalWrite(MUX_R_MICROSD_LED, HIGH);
+                    //digitalWrite(MUX_L_MICROSD_LED, LOW);
+                }
+                else printError(rBuff);
+            }
+
+            else if (startsWith(rbuffp, "auto ")) {
+                rbuffp += 5;
+                rbuffp = trimSpaces(rbuffp);
+                if (startsWith(rbuffp, "reset")) {
+                    printMsg("Resetting DUT");
+                    //pinMode(AUTO_RESET, OUTPUT);
+                    //digitalWrite(AUTO_RESET, LOW);
+                    //delay(100);
+                    //pinMode(AUTO_RESET, INPUT_PULLUP);
+                }
+                else if (startsWith(rbuffp, "por")) {
+                    printMsg("Power-On-Reset on DUT");
+                    //pinMode(AUTO_POR, OUTPUT);
+                    //digitalWrite(AUTO_POR, LOW);
+                    //delay(100);
+                    //pinMode(AUTO_POR, INPUT_PULLUP);
+                }
+                else if (startsWith(rbuffp, "power ")) {
+                    rbuffp += 6;
+                    rbuffp = trimSpaces(rbuffp);
+                    if (startsWith(rbuffp, "off")) {
+                        printMsg("Powering Off DUT");
+                        //digitalWrite(AUTO_POWER, HIGH);
+                    } else if(startsWith(rbuffp, "on")) {
+                        printMsg("Powering On DUT");
+                        //digitalWrite(AUTO_POWER, LOW);
+                    }
+                    else {
+                        printError(rBuff);
+                    }
+                }
+                else if (startsWith(rbuffp, "sysboot ")) {
+                    rbuffp += 8;
+                    rbuffp = trimSpaces(rbuffp);
+                    bootMode(rbuffp);
+                    printMsg("Sysboot set on DUT");
+                }
+                else if (startsWith(rbuffp, "set dut ")) {
+                    rbuffp += 8;
+                    rbuffp = trimSpaces(rbuffp);
+                    printMsg("Setting DUT");
+                    set_dut = 1;
+                    setDutType(rbuffp);
+                }
+                  else if(startsWith(rbuffp, "measure power ")) {
+                      int samples, delay;
+                      if (set_dut == 0) {
+                          printMsg("auto set dut <DUT type> must be called first");
+                      } else {
+                          printMsg("Measuring power");
+                          rbuffp += 14;
+                          rbuffp = trimSpaces(rbuffp);
+                          if (sscanf(rbuffp, "%d %d", &samples, &delay) != 2)
+                              printError(rBuff);
+                          measurePower(samples, delay);
+                      }
+                  }
+                  else {
+                      printError(rBuff);
+                  }
+            }
+
+            else if(startsWith(rbuffp, "help")) {
+              printHelp();
+            }
+
+            else {
+              printError(rBuff);
+            }
+            clearBuffer();
+          }
+        Task_sleep(10);
     }
-    readReg(i2c, 0x44, 0xfe, &data);
-    readReg(i2c, 0x44, 0xff, &data);
-    Display_printf(display, 0, 0, "Got I2C data!\n");
-*/
-    /* Deinitialized I2C */
-    I2C_close(i2c_bus[0]);
-    I2C_close(i2c_bus[1]);
-    Display_printf(display, 0, 0, "I2C closed!\n");
 
-    return (0);
 }
