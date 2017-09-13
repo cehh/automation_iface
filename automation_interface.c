@@ -168,9 +168,11 @@ void setDutType(char *dut_name)
         Display_printf("Error: Unsupported DUT %s", dut_name);
     }
 
-    result = ina226_init(rails, num_rails, i2c_bus);
-    if (result)
-        reportError("initializing ina226s");
+    if (set_dut) {
+        result = ina226_init(rails, num_rails, i2c_bus);
+        if (result)
+            reportError("initializing ina226s");
+    }
 }
 
 void configureRails(int num)
@@ -337,6 +339,8 @@ void cleanup()
 
 void digitalWrite(uint_least8_t index, unsigned int value)
 {
+    GPIO_PinConfig pinConfig;
+    GPIO_getConfig(index, &pinConfig);
     GPIO_write(index, value);
 }
 
@@ -344,7 +348,8 @@ void pinMode(uint_least8_t index, GPIO_PinConfig mode)
 {
     GPIO_PinConfig pinConfig;
     GPIO_getConfig(index, &pinConfig);
-    pinConfig |= mode;
+    pinConfig &= ~GPIO_INOUT_MASK;
+    pinConfig |= (mode & GPIO_INOUT_MASK);
     GPIO_setConfig(index, pinConfig);
 }
 

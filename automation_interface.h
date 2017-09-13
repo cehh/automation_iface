@@ -44,6 +44,7 @@
 #define INPUT (GPIO_CFG_INPUT)
 #define INPUT_PULLUP (GPIO_CFG_IN_PU)
 #define INPUT_PULLDOWN (GPIO_CFG_IN_PD)
+#define GPIO_INOUT_MASK (0x00070000)
 
 void clearBuffer();
 void printHelp();
