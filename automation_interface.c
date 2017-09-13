@@ -64,14 +64,15 @@ void clearBuffer()
 
 void printHelp()
 {
-  printMsg(" mmc <l-microsd|r-microsd>\t\t\t:connect to left/right microsd");
-  printMsg(" auto reset\t\t\t\t\t:warm reset DUT");
-  printMsg(" auto por\t\t\t\t\t:power on reset DUT");
-  printMsg(" auto power <on|off>\t\t\t\t:power on|off DUT");
+  printMsg(" mmc <l-microsd|r-microsd>\t\t\t:Connect to left/right uSD card");
+  printMsg(" auto reset\t\t\t\t\t:Warm reset DUT");
+  printMsg(" auto por\t\t\t\t\t:Power on reset DUT");
+  printMsg(" auto power <on|off>\t\t\t\t:Power on|off DUT");
   printMsg(" auto sysboot <setting>\t\t\t\t:e.g. 110000");
-  printMsg(" auto set dut <DUT type>\t\t\t:initialize i2c for DUT");
-  printMsg(" auto measure power <samples (<=150)> <delay (ms)>  :Measure DUT power");
-  printMsg(" help\t\t\t\t\t\t:print this menu");
+  printMsg(" auto set dut <DUT type>\t\t\t:Initialize i2c for DUT");
+  printMsg(" auto measure power <iter(<=150)> <delay(ms)>   :Measure DUT power");
+  printMsg(" version\t\t\t\t\t:Show SW version");
+  printMsg(" help\t\t\t\t\t\t:Print this menu");
 }
 
 void printError(char *cmd)
@@ -364,6 +365,7 @@ void *mainThread(void *arg0)
     }
 
     clearBuffer();
+    printMsg(version);
 
     /* Create I2C for usage */
     I2C_Params_init(&i2cParams);
@@ -380,7 +382,7 @@ void *mainThread(void *arg0)
         Display_printf("I2C Initialized!");
     }
 
-
+    printHelp();
 
     /* Loop forever echoing */
     while (1) {
@@ -496,6 +498,10 @@ void *mainThread(void *arg0)
 
             else if(startsWith(rbuffp, "help")) {
               printHelp();
+            }
+
+            else if(startsWith(rbuffp, "version")) {
+                printMsg(version);
             }
 
             else {

@@ -59,6 +59,7 @@ void cleanup();
 
 UART_Handle uart;
 I2C_Handle i2c_bus[2];
+static char version[] = "automation interface v0.1";
 char echoPrompt[] = "=>\r\n";
 char max_len_msg[] = "Max string length reached, resetting ....\r\n";
 static int rBytes = 0;
