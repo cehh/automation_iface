@@ -170,8 +170,10 @@ void setDutType(char *dut_name)
 
     if (set_dut) {
         result = ina226_init(rails, num_rails, i2c_bus);
-        if (result)
+        if (result) {
+            set_dut = 0;
             reportError("initializing ina226s");
+        }
     }
 }
 
