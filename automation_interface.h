@@ -33,11 +33,17 @@
 #ifndef AUTOMATION_INTERFACE_H_
 #define AUTOMATION_INTERFACE_H_
 
+#include <ti/drivers/GPIO.h>
+
 #define MAX_MESSAGE_LEN 256
 #define TABLE_MAX_ROW 15
 #define TABLE_MAX_COL 6
 #define TABLE_MAX_ELT_LEN 20
 #define BUFF_LENGTH (128)
+#define OUTPUT (GPIO_CFG_OUTPUT)
+#define INPUT (GPIO_CFG_INPUT)
+#define INPUT_PULLUP (GPIO_CFG_IN_PU)
+#define INPUT_PULLDOWN (GPIO_CFG_IN_PD)
 
 void clearBuffer();
 void printHelp();
@@ -55,6 +61,8 @@ void algo_average_data(int num, int dur_ms);
 int autoadjust_table_init();
 void Display_table(char table[][][], u16 num_rows);
 void Display_printf(char *fmt, ...);
+void digitalWrite(uint_least8_t index, unsigned int value);
+void pinMode(uint_least8_t index, GPIO_PinConfig mode);
 void cleanup();
 
 UART_Handle uart;
@@ -68,5 +76,8 @@ static char rBuff[BUFF_LENGTH];
 char *rbuffp = rBuff;
 struct ina226_rail *rails = NULL;
 size_t num_rails = 0;
+const unsigned int HIGH = 1;
+const unsigned int LOW = 0;
+
 
 #endif /* AUTOMATION_INTERFACE_H_ */

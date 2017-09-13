@@ -94,18 +94,18 @@ void printMsg(char *msg)
 int getSysbootPin(int pin) {
     switch(pin) {
         case 0:
-            return 40;
+            return AUTO_SYSBOOT0;
         case 1:
-            return 39;
+            return AUTO_SYSBOOT1;
         case 2:
-            return 38;
+            return AUTO_SYSBOOT2;
         case 3:
-            return 37;
+            return AUTO_SYSBOOT3;
         case 4:
-            return 34;
+            return AUTO_SYSBOOT4;
         case 5:
         default:
-            return 33;
+            return AUTO_SYSBOOT5;
     }
 }
 
@@ -140,9 +140,9 @@ void bootMode(char *mode)
     int i;
     for (i=0; i < 6; i++) {
         if ( *(mode + i) == '1' ) {
-            //digitalWrite(getSysbootPin(5-i), HIGH);
+            digitalWrite(getSysbootPin(5-i), HIGH);
         } else {
-            //digitalWrite(getSysbootPin(5-i), LOW);
+            digitalWrite(getSysbootPin(5-i), LOW);
         }
     }
 }
@@ -335,6 +335,19 @@ void cleanup()
     Display_printf("I2C closed!\n");
 }
 
+void digitalWrite(uint_least8_t index, unsigned int value)
+{
+    GPIO_write(index, value);
+}
+
+void pinMode(uint_least8_t index, GPIO_PinConfig mode)
+{
+    GPIO_PinConfig pinConfig;
+    GPIO_getConfig(index, &pinConfig);
+    pinConfig |= mode;
+    GPIO_setConfig(index, pinConfig);
+}
+
 /*
  *  ======== mainThread ========
  */
@@ -421,15 +434,15 @@ void *mainThread(void *arg0)
                 rbuffp = trimSpaces(rbuffp);
                 if (startsWith(rbuffp, "l-microsd")) {
                     printMsg("Using Left microSD connection");
-                    //digitalWrite(MUX_SELECT, HIGH);
-                    //digitalWrite(MUX_R_MICROSD_LED, LOW);
-                    //digitalWrite(MUX_L_MICROSD_LED, HIGH);
+                    digitalWrite(MUX_SELECT, HIGH);
+                    digitalWrite(MUX_R_MICROSD_LED, LOW);
+                    digitalWrite(MUX_L_MICROSD_LED, HIGH);
                 }
                 else if (startsWith(rbuffp, "r-microsd")) {
                     printMsg("Using Right microSD connection");
-                    //digitalWrite(MUX_SELECT, LOW);
-                    //digitalWrite(MUX_R_MICROSD_LED, HIGH);
-                    //digitalWrite(MUX_L_MICROSD_LED, LOW);
+                    digitalWrite(MUX_SELECT, LOW);
+                    digitalWrite(MUX_R_MICROSD_LED, HIGH);
+                    digitalWrite(MUX_L_MICROSD_LED, LOW);
                 }
                 else printError(rBuff);
             }
@@ -439,27 +452,27 @@ void *mainThread(void *arg0)
                 rbuffp = trimSpaces(rbuffp);
                 if (startsWith(rbuffp, "reset")) {
                     printMsg("Resetting DUT");
-                    //pinMode(AUTO_RESET, OUTPUT);
-                    //digitalWrite(AUTO_RESET, LOW);
-                    //delay(100);
-                    //pinMode(AUTO_RESET, INPUT_PULLUP);
+                    pinMode(AUTO_RESET, OUTPUT);
+                    digitalWrite(AUTO_RESET, LOW);
+                    Task_sleep(100);
+                    pinMode(AUTO_RESET, INPUT_PULLUP);
                 }
                 else if (startsWith(rbuffp, "por")) {
                     printMsg("Power-On-Reset on DUT");
-                    //pinMode(AUTO_POR, OUTPUT);
-                    //digitalWrite(AUTO_POR, LOW);
-                    //delay(100);
-                    //pinMode(AUTO_POR, INPUT_PULLUP);
+                    pinMode(AUTO_POR, OUTPUT);
+                    digitalWrite(AUTO_POR, LOW);
+                    Task_sleep(100);
+                    pinMode(AUTO_POR, INPUT_PULLUP);
                 }
                 else if (startsWith(rbuffp, "power ")) {
                     rbuffp += 6;
                     rbuffp = trimSpaces(rbuffp);
                     if (startsWith(rbuffp, "off")) {
                         printMsg("Powering Off DUT");
-                        //digitalWrite(AUTO_POWER, HIGH);
+                        digitalWrite(AUTO_POWER, HIGH);
                     } else if(startsWith(rbuffp, "on")) {
                         printMsg("Powering On DUT");
-                        //digitalWrite(AUTO_POWER, LOW);
+                        digitalWrite(AUTO_POWER, LOW);
                     }
                     else {
                         printError(rBuff);
