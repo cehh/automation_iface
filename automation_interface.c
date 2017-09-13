@@ -50,31 +50,7 @@
 /* Application Header files */
 #include "dra71x_evm.h"
 #include "ina226_reg_defns.h"
-
-/* Main application Definitions */
-#define MAX_MESSAGE_LEN 256
-#define TABLE_MAX_ROW 15
-#define TABLE_MAX_COL 6
-#define TABLE_MAX_ELT_LEN 20
-#define BUFF_LENGTH (128)
-
-static void clearBuffer();
-static void printMsg(char msg[]);
-void algo_average_data(int num, int dur_ms);
-int autoadjust_table_init();
-void Display_table(char table[][][], u16 num_rows);
-void Display_printf(char *fmt, ...);
-
-UART_Handle uart;
-I2C_Handle i2c_bus[2];
-char echoPrompt[] = "=>\r\n";
-char max_len_msg[] = "Max string length reached, resetting ....\r\n";
-static int rBytes = 0;
-static int set_dut = 0;
-static char rBuff[BUFF_LENGTH];
-char *rbuffp = rBuff;
-struct ina226_rail *rails = NULL;
-size_t num_rails = 0;
+#include "automation_interface.h"
 
 
 void clearBuffer()
@@ -88,14 +64,14 @@ void clearBuffer()
 
 void printHelp()
 {
-  printMsg("\t mmc <l-microsd|r-microsd>\t\t:connect to left-microsd or right-microsd");
-  printMsg("\t auto reset\t\t\t\t:warm reset DUT");
-  printMsg("\t auto por\t\t\t\t:power on reset DUT");
-  printMsg("\t auto power <on|off>\t\t\t:power on|off DUT");
-  printMsg("\t auto sysboot <setting>\t\t\t:e.g. 110000");
-  printMsg("\t auto set dut <DUT type>\t\t\t:initialize i2c based on DUT type");
-  printMsg("\t auto measure power <samples> <inter-sample delay (ms)>\t:Measure DUT power");
-  printMsg("\t help\t\t\t\t\t:print this menu");
+  printMsg(" mmc <l-microsd|r-microsd>\t\t\t:connect to left/right microsd");
+  printMsg(" auto reset\t\t\t\t\t:warm reset DUT");
+  printMsg(" auto por\t\t\t\t\t:power on reset DUT");
+  printMsg(" auto power <on|off>\t\t\t\t:power on|off DUT");
+  printMsg(" auto sysboot <setting>\t\t\t\t:e.g. 110000");
+  printMsg(" auto set dut <DUT type>\t\t\t:initialize i2c for DUT");
+  printMsg(" auto measure power <samples (<=150)> <delay (ms)>  :Measure DUT power");
+  printMsg(" help\t\t\t\t\t\t:print this menu");
 }
 
 void printError(char *cmd)
