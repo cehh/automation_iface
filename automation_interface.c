@@ -392,8 +392,8 @@ void *mainThread(void *arg0)
     i2cParams.transferMode = I2C_MODE_BLOCKING;
     i2cParams.bitRate = I2C_100kHz;
 
-    i2c_bus[0] = I2C_open(Board_I2C0, &i2cParams);
-    i2c_bus[1] = I2C_open(Board_I2C1, &i2cParams);
+    i2c_bus[0] = I2C_open(Board_I2C1, &i2cParams);
+    i2c_bus[1] = I2C_open(Board_I2C0, &i2cParams);
 
     if (i2c_bus[0] == NULL || i2c_bus[1] == NULL) {
         Display_printf("Error Initializing I2C!");
