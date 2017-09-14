@@ -7,10 +7,12 @@ Power measurement INA226 code based on https://github.com/nmenon/powertool
 
 ## Setup
 
-    Parlex-050R40-76B                               Serial
-      .5mm 3" cable       [SDmux BoosterPack]       Console
-DUT <===============> Automation Iface BoosterPack <=======> Control Host
-                         MSP432P401R LaunchPad
+    Parlex-050R40-76B                               
+      .5mm 3" cable        [SDmux BoosterPack]       
+  DUT <===============> Automation Iface BoosterPack 
+                           MSP432P401R LaunchPad <==========> Control Host
+                                                    Serial
+                                                    Console
   
 
 ## Resources & Jumper Settings
