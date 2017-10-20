@@ -30,8 +30,8 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef DRA71X_EVM_H_
-#define DRA71X_EVM_H_
+#ifndef EVMS_POWER_RAILS_H_
+#define EVMS_POWER_RAILS_H_
 
 #include "power_data.h"
 #include "ina226.h"
@@ -49,4 +49,20 @@ struct ina226_rail dra71x_evm_rails[] = {
     { .name = "vdd_ddr",      .i2c_bus_index = 1, .i2c_slave_addr = 0x43, .shunt_resistor_value = 0.010, .reg={}}
 };
 
-#endif /* DRA71X_EVM_H_ */
+struct ina226_rail dra76x_evm_rails[] = {
+    { .name = "vdd_mpu",      .i2c_bus_index = 0, .i2c_slave_addr = 0x40, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_gpu",      .i2c_bus_index = 0, .i2c_slave_addr = 0x41, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_dspeve",   .i2c_bus_index = 0, .i2c_slave_addr = 0x42, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_core",     .i2c_bus_index = 0, .i2c_slave_addr = 0x43, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_iva",      .i2c_bus_index = 0, .i2c_slave_addr = 0x44, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vddr",         .i2c_bus_index = 0, .i2c_slave_addr = 0x46, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vddr_soc",     .i2c_bus_index = 0, .i2c_slave_addr = 0x47, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdds_1v8",     .i2c_bus_index = 0, .i2c_slave_addr = 0x49, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_sdio",     .i2c_bus_index = 0, .i2c_slave_addr = 0x4a, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_usb",      .i2c_bus_index = 0, .i2c_slave_addr = 0x4b, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_pll",      .i2c_bus_index = 0, .i2c_slave_addr = 0x4c, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_phy2",      .i2c_bus_index = 0, .i2c_slave_addr = 0x4d, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_phy1",      .i2c_bus_index = 0, .i2c_slave_addr = 0x4e, .shunt_resistor_value = 0.010, .reg={}}
+};
+
+#endif /* EVMS_POWER_RAILS_H_ */

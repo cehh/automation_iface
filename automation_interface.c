@@ -37,6 +37,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <evms_power_rails.h>
 
 /* Driver Header files */
 #include <ti/drivers/I2C.h>
@@ -48,7 +49,6 @@
 #include "Board.h"
 
 /* Application Header files */
-#include "dra71x_evm.h"
 #include "ina226_reg_defns.h"
 #include "automation_interface.h"
 
@@ -162,6 +162,10 @@ void setDutType(char *dut_name)
     if (strcmp("dra71x-evm", dut_name) == 0) {
         rails = dra71x_evm_rails;
         num_rails = ARRAY_SIZE(dra71x_evm_rails);
+    }
+    else if (strcmp("dra76x-evm", dut_name) == 0) {
+        rails = dra76x_evm_rails;
+        num_rails = ARRAY_SIZE(dra76x_evm_rails);
     }
     else {
         set_dut = 0;
