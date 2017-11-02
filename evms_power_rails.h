@@ -54,7 +54,7 @@ struct ina226_rail dra76x_evm_rails[] = {
     { .name = "vdd_gpu",      .i2c_bus_index = 0, .i2c_slave_addr = 0x41, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vdd_dspeve",   .i2c_bus_index = 0, .i2c_slave_addr = 0x42, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vdd_core",     .i2c_bus_index = 0, .i2c_slave_addr = 0x43, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vda_iva",      .i2c_bus_index = 0, .i2c_slave_addr = 0x44, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_iva",      .i2c_bus_index = 0, .i2c_slave_addr = 0x44, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vddr",         .i2c_bus_index = 0, .i2c_slave_addr = 0x46, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vddr_soc",     .i2c_bus_index = 0, .i2c_slave_addr = 0x47, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vdds_1v8",     .i2c_bus_index = 0, .i2c_slave_addr = 0x49, .shunt_resistor_value = 0.010, .reg={}},
