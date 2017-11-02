@@ -1,15 +1,21 @@
 ## Summary
 
 Application to control TI's EVMs using automation interface header.
-Requires TI RTOS.
+The interface is a 40 pin connector (many are not used for now).
+It allows controlling power, warm-reset, cold-reset, boot mode pins
+(aka sysboot switch at TI) and measuring power. It also exposes a
+SoC GPIO pin that is currently not used.
+
+Control software runs on MSP432 (http://www.ti.com/tool/msp-exp432p401r)
+and it requires TI RTOS.
 
 Power measurement INA226 code based on https://github.com/nmenon/powertool
 
 ## Setup
 
     Parlex-050R40-76B                               
-      .5mm 3" cable        [SDmux BoosterPack]       
-  DUT <===============> Automation Iface BoosterPack 
+      .5mm 3" cable              
+ DUT <===============> Automation Iface BoosterPack 
                            MSP432P401R LaunchPad <==========> Control Host
                                                     Serial
                                                     Console
