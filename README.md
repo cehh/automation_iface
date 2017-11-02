@@ -12,14 +12,14 @@ and it requires TI RTOS.
 Power measurement INA226 code based on https://github.com/nmenon/powertool
 
 ## Setup
-
+```
     Parlex-050R40-76B                               
       .5mm 3" cable              
  DUT <===============> Automation Iface BoosterPack 
                            MSP432P401R LaunchPad <==========> Control Host
                                                     Serial
                                                     Console
-  
+```
 
 ## Resources & Jumper Settings
 Default MSP432P401R settings work, it is not required to set or modify any jumpers.
@@ -52,7 +52,8 @@ I2C ports:
 * Board_I2C1: Connects to DUT PM1 bus
 
 ## Software Interface
-automation interface v0.1 commands:
+```
+automation interface v0.2 commands:
  mmc <l-microsd|r-microsd>                      :Connect to left/right uSD card
  auto reset                                     :Warm reset DUT
  auto por                                       :Power on reset DUT
@@ -62,4 +63,4 @@ automation interface v0.1 commands:
  auto measure power <iter(<=150)> <delay(ms)>   :Measure DUT power
  version                                        :Show SW version
  help                                           :Print this menu
-
+```
