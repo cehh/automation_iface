@@ -65,4 +65,14 @@ struct ina226_rail dra76x_evm_rails[] = {
     { .name = "vda_phy1",      .i2c_bus_index = 0, .i2c_slave_addr = 0x4e, .shunt_resistor_value = 0.010, .reg={}}
 };
 
+struct ina226_rail am654x_evm_rails[] = {
+    { .name = "vdd_core",     .i2c_bus_index = 0, .i2c_slave_addr = 0x40, .shunt_resistor_value = 0.002, .reg={}},
+    { .name = "vdd_mcu",      .i2c_bus_index = 0, .i2c_slave_addr = 0x41, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_mpu",      .i2c_bus_index = 0, .i2c_slave_addr = 0x42, .shunt_resistor_value = 0.002, .reg={}},
+    { .name = "soc_dvdd3v3",  .i2c_bus_index = 0, .i2c_slave_addr = 0x43, .shunt_resistor_value = 0.002, .reg={}},
+    { .name = "soc_dvdd1v8",  .i2c_bus_index = 0, .i2c_slave_addr = 0x44, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "soc_avdd1v8",  .i2c_bus_index = 0, .i2c_slave_addr = 0x45, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "soc_vdds_ddr", .i2c_bus_index = 0, .i2c_slave_addr = 0x46, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_ddr",      .i2c_bus_index = 0, .i2c_slave_addr = 0x47, .shunt_resistor_value = 0.010, .reg={}}
+};
 #endif /* EVMS_POWER_RAILS_H_ */

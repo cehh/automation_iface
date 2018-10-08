@@ -167,6 +167,10 @@ void setDutType(char *dut_name)
         rails = dra76x_evm_rails;
         num_rails = ARRAY_SIZE(dra76x_evm_rails);
     }
+    else if (strcmp("am654x-evm", dut_name) == 0) {
+            rails = am654x_evm_rails;
+            num_rails = ARRAY_SIZE(am654x_evm_rails);
+    }
     else {
         set_dut = 0;
         Display_printf("Error: Unsupported DUT %s", dut_name);
