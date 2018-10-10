@@ -53,6 +53,50 @@
 #include "automation_interface.h"
 
 
+struct Pins_Mapping iface_v1_mappings = {
+   .auto_rstout    = J1_8,
+   .auto_gpio1     = J4_9,
+   .auto_gpio2     = 255,   /* not available on automation iface v1 dra71x/76x */
+   .auto_gpio3     = 255,   /* not available on automation iface v1 dra71x/76x */
+   .auto_gpio4     = 255,   /* not available on automation iface v1 dra71x/76x */
+   .auto_reset     = J1_5,
+   .auto_por       = J2_3,
+   .auto_power     = J2_2,
+   .auto_sysboot0  = J4_1,
+   .auto_sysboot1  = J4_2,
+   .auto_sysboot2  = J4_3,
+   .auto_sysboot3  = J4_4,
+   .auto_sysboot4  = J4_7,
+   .auto_sysboot5  = J2_8,
+   .mux_select     = J4_10,
+   .mux_l_microsd_led = 255,
+   .mux_r_microsd_led = 255,
+   .i2c_power_buses = {Board_I2C1, Board_I2C0},
+   .i2c_gpio_buses  = {-1, -1}
+};
+
+struct Pins_Mapping iface_v2_mappings = {
+    .auto_rstout    = 255,   /* not available on iface v2 am654x */
+    .auto_gpio1     = J4_8,
+    .auto_gpio2     = J2_9,   /* available since iface v2 am654x */
+    .auto_gpio3     = J4_9,   /* available since iface v2 am654x */
+    .auto_gpio4     = J2_10,   /* available since iface v2 am654x */
+    .auto_reset     = J1_5,
+    .auto_por       = J2_3,
+    .auto_power     = J2_2,
+    .auto_sysboot0  = 255,
+    .auto_sysboot1  = 255,
+    .auto_sysboot2  = 255,
+    .auto_sysboot3  = 255,
+    .auto_sysboot4  = 255,
+    .auto_sysboot5  = 255,
+    .mux_select     = J4_10,
+    .mux_l_microsd_led = 255,
+    .mux_r_microsd_led = 255,
+    .i2c_power_buses = {Board_I2C1, -1},
+    .i2c_gpio_buses  = {Board_I2C0, -1}
+};
+
 void clearBuffer()
 {
     int i;
@@ -94,18 +138,18 @@ void printMsg(char *msg)
 int getSysbootPin(int pin) {
     switch(pin) {
         case 0:
-            return AUTO_SYSBOOT0;
+            return pinsMapping->auto_sysboot0;
         case 1:
-            return AUTO_SYSBOOT1;
+            return  pinsMapping->auto_sysboot1;
         case 2:
-            return AUTO_SYSBOOT2;
+            return  pinsMapping->auto_sysboot2;
         case 3:
-            return AUTO_SYSBOOT3;
+            return  pinsMapping->auto_sysboot3;
         case 4:
-            return AUTO_SYSBOOT4;
+            return  pinsMapping->auto_sysboot4;
         case 5:
         default:
-            return AUTO_SYSBOOT5;
+            return  pinsMapping->auto_sysboot5;
     }
 }
 
@@ -135,7 +179,10 @@ int startsWith(char *str, char *substr)
     return (strncmp(str, substr, sub_len) == 0);
 }
 
-void bootMode(char *mode)
+/*
+ *  Set boot mode pins via GPIO
+ */
+void bootModeGpio(char *mode)
 {
     int i;
     for (i=0; i < 6; i++) {
@@ -145,6 +192,15 @@ void bootMode(char *mode)
             digitalWrite(getSysbootPin(5-i), LOW);
         }
     }
+}
+
+/*
+ *  Set boot mode pins via I2C expander present on some EVMs
+ */
+void bootModeI2C(char *mode)
+{
+    printMsg("I2C Boot mode implementation");
+    // Must write a 0 to auto_gpio3 to enable bootmode buffer
 }
 
 void reportError(char *message)
@@ -159,17 +215,23 @@ void reportError(char *message)
 void setDutType(char *dut_name)
 {
     int result;
+    bootMode = &bootModeI2C;
+    pinsMapping = &iface_v2_mappings;
     if (strcmp("dra71x-evm", dut_name) == 0) {
+        bootMode = &bootModeGpio;
+        pinsMapping = &iface_v1_mappings;
         rails = dra71x_evm_rails;
         num_rails = ARRAY_SIZE(dra71x_evm_rails);
     }
     else if (strcmp("dra76x-evm", dut_name) == 0) {
+        bootMode = &bootModeGpio;
+        pinsMapping = &iface_v1_mappings;
         rails = dra76x_evm_rails;
         num_rails = ARRAY_SIZE(dra76x_evm_rails);
     }
     else if (strcmp("am654x-evm", dut_name) == 0) {
-            rails = am654x_evm_rails;
-            num_rails = ARRAY_SIZE(am654x_evm_rails);
+        rails = am654x_evm_rails;
+        num_rails = ARRAY_SIZE(am654x_evm_rails);
     }
     else {
         set_dut = 0;
@@ -182,6 +244,8 @@ void setDutType(char *dut_name)
             set_dut = 0;
             reportError("initializing ina226s");
         }
+        // Init gpio expander if there is one
+        // as part of gpio init must toggle (0/1) auto_gpio4 to reset gpio expander
     }
 }
 
@@ -349,6 +413,8 @@ void cleanup()
 
 void digitalWrite(uint_least8_t index, unsigned int value)
 {
+    if (index == 255)
+        return;
     GPIO_PinConfig pinConfig;
     GPIO_getConfig(index, &pinConfig);
     GPIO_write(index, value);
@@ -356,6 +422,8 @@ void digitalWrite(uint_least8_t index, unsigned int value)
 
 void pinMode(uint_least8_t index, GPIO_PinConfig mode)
 {
+    if (index == 255)
+        return;
     GPIO_PinConfig pinConfig;
     GPIO_getConfig(index, &pinConfig);
     pinConfig &= ~GPIO_INOUT_MASK;
@@ -449,15 +517,15 @@ void *mainThread(void *arg0)
                 rbuffp = trimSpaces(rbuffp);
                 if (startsWith(rbuffp, "l-microsd")) {
                     printMsg("Using Left microSD connection");
-                    digitalWrite(MUX_SELECT, HIGH);
-                    digitalWrite(MUX_R_MICROSD_LED, LOW);
-                    digitalWrite(MUX_L_MICROSD_LED, HIGH);
+                    digitalWrite(pinsMapping->mux_select, HIGH);
+                    digitalWrite(pinsMapping->mux_r_microsd_led, LOW);
+                    digitalWrite(pinsMapping->mux_l_microsd_led, HIGH);
                 }
                 else if (startsWith(rbuffp, "r-microsd")) {
                     printMsg("Using Right microSD connection");
-                    digitalWrite(MUX_SELECT, LOW);
-                    digitalWrite(MUX_R_MICROSD_LED, HIGH);
-                    digitalWrite(MUX_L_MICROSD_LED, LOW);
+                    digitalWrite(pinsMapping->mux_select, LOW);
+                    digitalWrite(pinsMapping->mux_r_microsd_led, HIGH);
+                    digitalWrite(pinsMapping->mux_l_microsd_led, LOW);
                 }
                 else printError(rBuff);
             }
@@ -467,27 +535,27 @@ void *mainThread(void *arg0)
                 rbuffp = trimSpaces(rbuffp);
                 if (startsWith(rbuffp, "reset")) {
                     printMsg("Resetting DUT");
-                    pinMode(AUTO_RESET, OUTPUT);
-                    digitalWrite(AUTO_RESET, LOW);
+                    pinMode(pinsMapping->auto_reset, OUTPUT);
+                    digitalWrite(pinsMapping->auto_reset, LOW);
                     Task_sleep(100);
-                    pinMode(AUTO_RESET, INPUT_PULLUP);
+                    pinMode(pinsMapping->auto_reset, INPUT_PULLUP);
                 }
                 else if (startsWith(rbuffp, "por")) {
                     printMsg("Power-On-Reset on DUT");
-                    pinMode(AUTO_POR, OUTPUT);
-                    digitalWrite(AUTO_POR, LOW);
+                    pinMode(pinsMapping->auto_por, OUTPUT);
+                    digitalWrite(pinsMapping->auto_por, LOW);
                     Task_sleep(100);
-                    pinMode(AUTO_POR, INPUT_PULLUP);
+                    pinMode(pinsMapping->auto_por, INPUT_PULLUP);
                 }
                 else if (startsWith(rbuffp, "power ")) {
                     rbuffp += 6;
                     rbuffp = trimSpaces(rbuffp);
                     if (startsWith(rbuffp, "off")) {
                         printMsg("Powering Off DUT");
-                        digitalWrite(AUTO_POWER, HIGH);
+                        digitalWrite(pinsMapping->auto_power, HIGH);
                     } else if(startsWith(rbuffp, "on")) {
                         printMsg("Powering On DUT");
-                        digitalWrite(AUTO_POWER, LOW);
+                        digitalWrite(pinsMapping->auto_power, LOW);
                     }
                     else {
                         printError(rBuff);

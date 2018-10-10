@@ -106,22 +106,23 @@ typedef enum MSP_EXP432P401R_GPIOName {
     MSP_EXP432P401R_GPIO_S2,
 
     /* used by automation header boosterpack */
-    AUTO_RSTOUT,
-    AUTO_GPIO,
-    AUTO_RESET,
-    AUTO_POR,
-    AUTO_POWER,
-    AUTO_SYSBOOT0,
-    AUTO_SYSBOOT1,
-    AUTO_SYSBOOT2,
-    AUTO_SYSBOOT3,
-    AUTO_SYSBOOT4,
-    AUTO_SYSBOOT5,
+    J1_8, /* AUTO_RSTOUT */
+    J4_8, /* AUTO_GPIO1 */
+    J2_9, /* AUTO_GPIO2 */
+    J4_9, /* AUTO_GPIO3 */
+    J2_10, /* AUTO_GPIO4 */
+    J1_5, /* AUTO_RESET */
+    J2_3, /* AUTO_POR */
+    J2_2, /* AUTO_POWER */
+    J4_1, /* AUTO_SYSBOOT0 */
+    J4_2, /* AUTO_SYSBOOT1 */
+    J4_3, /* AUTO_SYSBOOT2 */
+    J4_4, /* AUTO_SYSBOOT3 */
+    J4_7, /* AUTO_SYSBOOT4 */
+    J2_8, /* AUTO_SYSBOOT5 */
 
     /* used by SD mux boosterpack */
-    MUX_L_MICROSD_LED,
-    MUX_R_MICROSD_LED,
-    MUX_SELECT,
+    J4_10, /* MUX_SELECT */
 
     MSP_EXP432P401R_GPIO_LED1,
     MSP_EXP432P401R_GPIO_LED_RED,

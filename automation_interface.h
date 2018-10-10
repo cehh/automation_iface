@@ -53,7 +53,8 @@ void printMsg(char msg[]);
 int getSysbootPin(int pin);
 char *trimSpaces(char *str);
 int startsWith(char *str, char *substr);
-void bootMode(char *mode);
+typedef void (bootModeIface)(char *mode);
+bootModeIface *bootMode;
 void reportError(char *message);
 void setDutType(char *dut_name);
 void configureRails(int num);
@@ -80,5 +81,30 @@ size_t num_rails = 0;
 const unsigned int HIGH = 1;
 const unsigned int LOW = 0;
 
+typedef struct Pins_Mapping {
+    short auto_rstout;
+    short auto_gpio1;
+    short auto_gpio2; /* introduced on iface v2 (i.e. AM654x) */
+    short auto_gpio3; /* introduced on iface v2 (i.e. AM654x) */
+    short auto_gpio4; /* introduced on iface v2 (i.e. AM654x) */
+    short auto_reset;
+    short auto_por;
+    short auto_power;
+    short auto_sysboot0;
+    short auto_sysboot1;
+    short auto_sysboot2;
+    short auto_sysboot3;
+    short auto_sysboot4;
+    short auto_sysboot5;
+    short mux_select;
+    short mux_l_microsd_led;  /* deprecated on iface v2 (i.e. AM654x) */
+    short mux_r_microsd_led;   /* deprecated on iface v2 (i.e. AM654x) */
+    short i2c_power_buses[2]; /* index of msp432 i2c buses used to measure
+                                 power, enter -1 if bus is not used for power */
+    short i2c_gpio_buses[2];   /* index of msp432 i2c buses used to control gpio
+                                 expander, enter -1 if bus is not used for gpio */
+} Pins_Mapping;
+
+struct Pins_Mapping *pinsMapping;
 
 #endif /* AUTOMATION_INTERFACE_H_ */
