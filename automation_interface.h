@@ -65,10 +65,14 @@ void Display_table(char table[][][], u16 num_rows);
 void Display_printf(char *fmt, ...);
 void digitalWrite(uint_least8_t index, unsigned int value);
 void pinMode(uint_least8_t index, GPIO_PinConfig mode);
+int initDutI2cBuses();
+void mapI2cBuses();
 void cleanup();
 
 UART_Handle uart;
 I2C_Handle i2c_bus[2];
+I2C_Handle i2c_power_bus[2] = {NULL, NULL};
+I2C_Handle i2c_gpio_bus[2]  = {NULL, NULL};
 static char version[] = "automation interface v0.2";
 char echoPrompt[] = "=>\r\n";
 char max_len_msg[] = "Max string length reached, resetting ....\r\n";

@@ -37,6 +37,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include <evms_power_rails.h>
 
 /* Driver Header files */
@@ -50,6 +51,7 @@
 
 /* Application Header files */
 #include "ina226_reg_defns.h"
+#include "tca6424a.h"
 #include "automation_interface.h"
 
 
@@ -194,13 +196,46 @@ void bootModeGpio(char *mode)
     }
 }
 
+void lowPulseGpio(short pin)
+{
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+    Task_sleep(100);
+    pinMode(pin, INPUT_PULLUP);
+}
+
 /*
  *  Set boot mode pins via I2C expander present on some EVMs
  */
 void bootModeI2C(char *mode)
 {
     printMsg("I2C Boot mode implementation");
-    // Must write a 0 to auto_gpio3 to enable bootmode buffer
+    char *p = mode;
+    char word[3] = {NULL, NULL, NULL};
+    u8 bank = 0;
+    u8 out;
+    while (*p != NULL)
+        p++;
+    if (p == mode) {
+        printError("Must provide at least one boot mode word");
+        return;
+    }
+    while ((p - mode) > 2) {
+        word[1] = *(--p);
+        word[0] = *(--p);
+        out = (u8)strtol(word, NULL, 16);
+        tca6424WriteBank(bank, out, i2c_gpio_bus[0]);
+        bank++;
+    }
+    word[1] = *(--p);
+    if (p > mode)
+        word[0] = *(--p);
+    else {
+        word[0] = word[1];
+        word[1] = NULL;
+    }
+    out = (u8)strtol(word, NULL, 16);
+    tca6424WriteBank(bank, out, i2c_gpio_bus[0]);
 }
 
 void reportError(char *message)
@@ -209,7 +244,7 @@ void reportError(char *message)
 }
 
 /*
- * Define devices available in DUT's PM1 and PM2 buses and
+ * Define devices available in DUT's PM1 and PM2/BM buses and
  * initialize them.
  */
 void setDutType(char *dut_name)
@@ -239,13 +274,25 @@ void setDutType(char *dut_name)
     }
 
     if (set_dut) {
-        result = ina226_init(rails, num_rails, i2c_bus);
-        if (result) {
-            set_dut = 0;
-            reportError("initializing ina226s");
+        mapI2cBuses();
+        // Init I2C power measurement devices
+        if (i2c_power_bus[0]) {
+            result = ina226_init(rails, num_rails, i2c_power_bus);
+            if (result) {
+                set_dut = 0;
+                reportError("initializing ina226s");
+            }
         }
-        // Init gpio expander if there is one
-        // as part of gpio init must toggle (0/1) auto_gpio4 to reset gpio expander
+        // Init I2C I/O expander devices
+        lowPulseGpio(pinsMapping->auto_gpio4);  // toggle auto_gpio4 to reset gpio expander
+        if (i2c_gpio_bus[0]) {
+            if (! tca6424Init(i2c_gpio_bus[0]))
+                reportError("Initializing tca6424");
+            if (! tca6424TestConnection(i2c_gpio_bus[0])) {
+                //set_dut = 0;
+                reportError("Connecting to tca6424");
+            }
+        }
     }
 }
 
@@ -262,7 +309,7 @@ void configureRails(int num)
             reportError(message);
         }
 
-        ret = ina226_configure(rail, i2c_bus);
+        ret = ina226_configure(rail, i2c_power_bus);
         if (ret) {
             snprintf(message, MAX_MESSAGE_LEN, "configuring %s failed:%d\n", rail->name, ret);
             reportError(message);
@@ -279,7 +326,7 @@ void measurePower(int num, int duration_ms)
     configureRails(num);
     for (sample=0; sample < num; sample++) {
         for (rail_idx=0; rail_idx < num_rails; rail_idx++) {
-            ret = ina226_sample_one(&rails[rail_idx], i2c_bus);
+            ret = ina226_sample_one(&rails[rail_idx], i2c_power_bus);
             if (ret) {
                 snprintf(message, MAX_MESSAGE_LEN, "sampling %s failed:%d\n", rails[rail_idx].name, ret);
                 reportError(message);
@@ -403,11 +450,18 @@ void Display_table(
     }
 }
 
+
 void cleanup()
 {
     /* Deinitialized I2C */
-    I2C_close(i2c_bus[0]);
-    I2C_close(i2c_bus[1]);
+    int index = 0;
+    while (i2c_power_bus[index] != NULL) {
+        I2C_close(i2c_power_bus[index]);
+    }
+    index=0;
+    while (i2c_gpio_bus[index] != NULL) {
+        I2C_close(i2c_gpio_bus[index]);
+    }
     Display_printf("I2C closed!\n");
 }
 
@@ -431,13 +485,48 @@ void pinMode(uint_least8_t index, GPIO_PinConfig mode)
     GPIO_setConfig(index, pinConfig);
 }
 
+
+int initDutI2cBuses()
+{
+    I2C_Params      i2cParams;
+    int index;
+    /* Create I2C for usage */
+    I2C_Params_init(&i2cParams);
+    i2cParams.transferMode = I2C_MODE_BLOCKING;
+    i2cParams.bitRate = I2C_100kHz;
+
+    for(index = 0; index < MSP_EXP432P401R_I2CCOUNT; index++)
+    {
+        i2c_bus[index] = I2C_open(index, &i2cParams);
+        if (i2c_bus[index] == NULL) {
+            Display_printf("Error Initializing PM I2C!");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+void mapI2cBuses()
+{
+    /* Map i2c power measurement bus if any */
+    int index;
+    for(index = 0; pinsMapping->i2c_power_buses[index] != -1; index++)
+        i2c_power_bus[index] = i2c_bus[pinsMapping->i2c_power_buses[index]];
+
+    /* Map i2c gpio bus if any */
+    for(index = 0; pinsMapping->i2c_gpio_buses[index] != -1; index++)
+        i2c_gpio_bus[index] = i2c_bus[pinsMapping->i2c_gpio_buses[index]];
+
+    Display_printf("Done initializing I2C buses!");
+}
+
 /*
  *  ======== mainThread ========
  */
 void *mainThread(void *arg0)
 {
     UART_Params uartParams;
-    I2C_Params      i2cParams;
     unsigned int i;
 
     /* Call driver init functions */
@@ -460,23 +549,11 @@ void *mainThread(void *arg0)
         while (1);
     }
 
+    if (initDutI2cBuses())
+        printError("Could not properly open I2C buses");
+
     clearBuffer();
     printMsg(version);
-
-    /* Create I2C for usage */
-    I2C_Params_init(&i2cParams);
-    i2cParams.transferMode = I2C_MODE_BLOCKING;
-    i2cParams.bitRate = I2C_100kHz;
-
-    i2c_bus[0] = I2C_open(Board_I2C1, &i2cParams);
-    i2c_bus[1] = I2C_open(Board_I2C0, &i2cParams);
-
-    if (i2c_bus[0] == NULL || i2c_bus[1] == NULL) {
-        Display_printf("Error Initializing I2C!");
-    }
-    else {
-        Display_printf("I2C Initialized!");
-    }
 
     printHelp();
 
@@ -535,17 +612,11 @@ void *mainThread(void *arg0)
                 rbuffp = trimSpaces(rbuffp);
                 if (startsWith(rbuffp, "reset")) {
                     printMsg("Resetting DUT");
-                    pinMode(pinsMapping->auto_reset, OUTPUT);
-                    digitalWrite(pinsMapping->auto_reset, LOW);
-                    Task_sleep(100);
-                    pinMode(pinsMapping->auto_reset, INPUT_PULLUP);
+                    lowPulseGpio(pinsMapping->auto_reset);
                 }
                 else if (startsWith(rbuffp, "por")) {
                     printMsg("Power-On-Reset on DUT");
-                    pinMode(pinsMapping->auto_por, OUTPUT);
-                    digitalWrite(pinsMapping->auto_por, LOW);
-                    Task_sleep(100);
-                    pinMode(pinsMapping->auto_por, INPUT_PULLUP);
+                    lowPulseGpio(pinsMapping->auto_por);
                 }
                 else if (startsWith(rbuffp, "power ")) {
                     rbuffp += 6;
