@@ -38,6 +38,8 @@ static int _tca6424aReadBytes(u8 slave_addr, u8 reg, u8 *data, size_t num_bytes,
     i2cTransaction.writeCount = 1;
     i2cTransaction.readBuf = data;
     i2cTransaction.readCount = num_bytes;
+    i2cTransaction.arg = NULL;
+    i2cTransaction.nextPtr = NULL;
     status = I2C_transfer(i2c, &i2cTransaction);
     return !status; // So that 0 is returned on success like in Linux
 }
@@ -55,6 +57,8 @@ static int _tca6424aWriteBytes(u8 slave_addr, u8 reg, u8 *data, size_t num_bytes
     i2cTransaction.writeCount = num_bytes+1;
     i2cTransaction.readBuf = NULL;
     i2cTransaction.readCount = 0;
+    i2cTransaction.arg = NULL;
+    i2cTransaction.nextPtr = NULL;
     status = I2C_transfer(i2c, &i2cTransaction);
     return !status;
 }
