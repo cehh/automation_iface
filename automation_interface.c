@@ -204,6 +204,17 @@ void lowPulseGpio(short pin)
     pinMode(pin, INPUT_PULLUP);
 }
 
+void lowPulseKeepHigh(short pin)
+{
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, HIGH);
+    Task_sleep(10);
+    digitalWrite(pin, LOW);
+    Task_sleep(10);
+    digitalWrite(pin, HIGH);
+    Task_sleep(100);
+}
+
 /*
  *  Set boot mode pins via I2C expander present on some EVMs
  */
@@ -284,14 +295,19 @@ void setDutType(char *dut_name)
             }
         }
         // Init I2C I/O expander devices
-        lowPulseGpio(pinsMapping->auto_gpio4);  // toggle auto_gpio4 to reset gpio expander
+        lowPulseKeepHigh(pinsMapping->auto_gpio4);  // toggle auto_gpio4 to reset gpio expander
         if (i2c_gpio_bus[0]) {
-            if (! tca6424Init(i2c_gpio_bus[0]))
-                reportError("Initializing tca6424");
-            if (! tca6424TestConnection(i2c_gpio_bus[0])) {
-                //set_dut = 0;
+            if (!tca6424TestConnection(i2c_gpio_bus[0])) {
+                set_dut = 0;
                 reportError("Connecting to tca6424");
             }
+            if (tca6424Init(i2c_gpio_bus[0])) {
+                set_dut = 0;
+                reportError("Initializing tca6424");
+            }
+            // enable bootmode
+            pinMode(pinsMapping->auto_gpio3, OUTPUT);
+            digitalWrite(pinsMapping->auto_gpio3, LOW);
         }
     }
 }
@@ -499,7 +515,7 @@ int initDutI2cBuses()
     {
         i2c_bus[index] = I2C_open(index, &i2cParams);
         if (i2c_bus[index] == NULL) {
-            Display_printf("Error Initializing PM I2C!");
+            Display_printf("Error Initializing I2C %i\n", index);
             return 1;
         }
     }
