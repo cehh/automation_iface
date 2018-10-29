@@ -285,6 +285,14 @@ void setDutType(char *dut_name)
     }
 
     if (set_dut) {
+        // Clean I2C connections
+        cleanup();
+        // Open I2C connections
+        if (initDutI2cBuses()) {
+            printError("Could not properly open I2C buses");
+            set_dut = 0;
+            return;
+        }
         mapI2cBuses();
         // Init I2C power measurement devices
         if (i2c_power_bus[0]) {
@@ -473,10 +481,12 @@ void cleanup()
     int index = 0;
     while (i2c_power_bus[index] != NULL) {
         I2C_close(i2c_power_bus[index]);
+        index++;
     }
     index=0;
     while (i2c_gpio_bus[index] != NULL) {
         I2C_close(i2c_gpio_bus[index]);
+        index++;
     }
     Display_printf("I2C closed!\n");
 }
@@ -564,9 +574,6 @@ void *mainThread(void *arg0)
         /* UART_open() failed */
         while (1);
     }
-
-    if (initDutI2cBuses())
-        printError("Could not properly open I2C buses");
 
     clearBuffer();
     printMsg(version);
