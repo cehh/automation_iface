@@ -580,6 +580,8 @@ void *mainThread(void *arg0)
 
     printHelp();
 
+    pinsMapping = &iface_v2_mappings;
+
     /* Loop forever echoing */
     while (1) {
         while (1) {
