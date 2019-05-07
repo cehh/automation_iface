@@ -44,6 +44,7 @@
 #include <ti/drivers/I2C.h>
 #include <ti/drivers/GPIO.h>
 #include <ti/drivers/UART.h>
+#include <ti/drivers/Watchdog.h>
 #include <ti/sysbios/knl/Task.h>
 
 /* Example/Board Header files */
@@ -53,7 +54,6 @@
 #include "ina226_reg_defns.h"
 #include "tca6424a.h"
 #include "automation_interface.h"
-
 
 struct Pins_Mapping iface_v1_mappings = {
    .auto_rstout    = J1_8,
@@ -96,6 +96,29 @@ struct Pins_Mapping iface_v2_mappings = {
     .mux_l_microsd_led = 255,
     .mux_r_microsd_led = 255,
     .i2c_power_buses = {Board_I2C1, -1},
+    .i2c_gpio_buses  = {Board_I2C0, -1}
+};
+
+/* J7es mappings */
+struct Pins_Mapping iface_v3_mappings = {
+    .auto_rstout    = 255,   /* not available on iface v2 am654x */
+    .auto_gpio1     = J4_8,
+    .auto_gpio2     = J2_9,   /* available since iface v2 am654x */
+    .auto_gpio3     = J4_9,   /* available since iface v2 am654x */
+    .auto_gpio4     = J2_10,   /* available since iface v2 am654x */
+    .auto_reset     = J1_5,
+    .auto_por       = J2_3,
+    .auto_power     = J2_2,
+    .auto_sysboot0  = 255,
+    .auto_sysboot1  = 255,
+    .auto_sysboot2  = 255,
+    .auto_sysboot3  = 255,
+    .auto_sysboot4  = 255,
+    .auto_sysboot5  = 255,
+    .mux_select     = J4_10,
+    .mux_l_microsd_led = 255,
+    .mux_r_microsd_led = 255,
+    .i2c_power_buses = {Board_I2C1, Board_I2C0},
     .i2c_gpio_buses  = {Board_I2C0, -1}
 };
 
@@ -278,6 +301,11 @@ void setDutType(char *dut_name)
     else if (strcmp("am654x-evm", dut_name) == 0 || strcmp("am654x-idk", dut_name) == 0) {
         rails = am654x_evm_rails;
         num_rails = ARRAY_SIZE(am654x_evm_rails);
+    }
+    else if (strcmp("j721e-evm", dut_name) == 0 || strcmp("j721e-idk-gw", dut_name) == 0) {
+        pinsMapping = &iface_v3_mappings;
+        rails = j721e_evm_rails;
+        num_rails = ARRAY_SIZE(j721e_evm_rails);
     }
     else {
         set_dut = 0;
@@ -548,17 +576,41 @@ void mapI2cBuses()
 }
 
 /*
+ *  ======== watchdogCallback ========
+ */
+void watchdogCallback(uintptr_t watchdogHandle)
+{
+    /*
+     * If the Watchdog Non-Maskable Interrupt (NMI) is called,
+     * loop until the device resets. Some devices will invoke
+     * this callback upon watchdog expiration while others will
+     * reset. See the device specific watchdog driver documentation
+     * for your device.
+     */
+    while (1) {}
+}
+
+/*
  *  ======== mainThread ========
  */
 void *mainThread(void *arg0)
 {
-    UART_Params uartParams;
-    unsigned int i;
+    UART_Params     uartParams;
+    unsigned int    i;
+    Watchdog_Handle watchdogHandle;
+    Watchdog_Params wdParams;
 
     /* Call driver init functions */
     I2C_init();
     GPIO_init();
     UART_init();
+    Watchdog_init();
+
+    /* Initialize Watchdog to reset board if not pet */
+    Watchdog_Params_init(&wdParams);
+    wdParams.callbackFxn = (Watchdog_Callback) watchdogCallback;
+    wdParams.debugStallMode = Watchdog_DEBUG_STALL_ON;
+    wdParams.resetMode = Watchdog_RESET_ON;
 
     /* Create a UART with data processing off. */
     UART_Params_init(&uartParams);
@@ -607,6 +659,13 @@ void *mainThread(void *arg0)
                 rBytes += 1;
                 Task_sleep(10);
             }
+        }
+
+        /* Open a Watchdog driver instance with timeout of 11 seconds, timeout defined at WatchdogMSP432_HWAttrs */
+        watchdogHandle = Watchdog_open(Board_WATCHDOG0, &wdParams);
+        if (watchdogHandle == NULL) {
+            /* Error opening Watchdog */
+            while (1) {}
         }
 
         if (rBytes >= 0) {
@@ -701,6 +760,9 @@ void *mainThread(void *arg0)
             }
             clearBuffer();
           }
+        if (watchdogHandle != NULL) {
+            Watchdog_close(watchdogHandle);
+        }
         Task_sleep(10);
     }
 
