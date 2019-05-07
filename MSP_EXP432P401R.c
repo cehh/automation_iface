@@ -869,7 +869,7 @@ const WatchdogMSP432_HWAttrs
         .intNum = INT_WDT_A,
         .intPriority = (~0),
         .clockSource = WDT_A_CLOCKSOURCE_SMCLK,
-        .clockDivider = WDT_A_CLOCKDIVIDER_8192K
+        .clockDivider = WDT_A_CLOCKDIVIDER_128M
     }
 };
 
