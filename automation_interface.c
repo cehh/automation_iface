@@ -599,6 +599,7 @@ void *mainThread(void *arg0)
     unsigned int    i;
     Watchdog_Handle watchdogHandle;
     Watchdog_Params wdParams;
+    const char* backspace = "\b \b";
 
     /* Call driver init functions */
     I2C_init();
@@ -638,6 +639,14 @@ void *mainThread(void *arg0)
     while (1) {
         while (1) {
             UART_read(uart, rbuffp + rBytes, 1);
+
+            if(rBytes > 0 && (rBuff[rBytes] == 8 || rBuff[rBytes] == 127)) {
+                UART_write(uart, backspace, strlen(backspace));
+                rBuff[rBytes] = 0;
+                rBytes -= 1;
+                continue;
+            }
+
             UART_write(uart, rbuffp + rBytes, 1);
 
             if (rBytes == BUFF_LENGTH) {
@@ -647,10 +656,6 @@ void *mainThread(void *arg0)
             } else if(rBuff[rBytes] == 13 || rBuff[rBytes] == 10) {
                 printMsg("");
                 break;
-
-            } else if(rBytes > 0 && (rBuff[rBytes] == 8 || rBuff[rBytes] == 127)) {
-                rBuff[rBytes] = 0;
-                rBytes -= 1;
 
             } else if(rBuff[rBytes] == 27 || rBuff[rBytes] == 3) {
                 printMsg("^C");
