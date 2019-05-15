@@ -36,7 +36,7 @@
 #include <ti/drivers/GPIO.h>
 
 #define MAX_MESSAGE_LEN 256
-#define TABLE_MAX_ROW 16
+#define TABLE_MAX_ROW 42
 #define TABLE_MAX_COL 6
 #define TABLE_MAX_ELT_LEN 20
 #define BUFF_LENGTH (128)

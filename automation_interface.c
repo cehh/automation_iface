@@ -454,6 +454,10 @@ void algo_average_data(int num, int dur_ms)
         snprintf(table[row][5], TABLE_MAX_ELT_LEN, "---");
         row++;
         snprintf(table[row][0], TABLE_MAX_ELT_LEN, "Total");
+        snprintf(table[row][1], TABLE_MAX_ELT_LEN, "\0");
+        snprintf(table[row][2], TABLE_MAX_ELT_LEN, "\0");
+        snprintf(table[row][3], TABLE_MAX_ELT_LEN, "\0");
+        snprintf(table[row][4], TABLE_MAX_ELT_LEN, "\0");
         snprintf(table[row][5], TABLE_MAX_ELT_LEN, "%3.2f",
              current_summary_bus);
         row++;
