@@ -109,6 +109,6 @@ struct ina226_rail j721e_evm_rails[] = {
     { .name = "vsys_3v3",          .i2c_bus_index = 1, .i2c_slave_addr = 0x4c, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vsys_3v3_som",      .i2c_bus_index = 1, .i2c_slave_addr = 0x4d, .shunt_resistor_value = 0.001, .reg={}},
     { .name = "vdda_dll_0v8",      .i2c_bus_index = 1, .i2c_slave_addr = 0x4e, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "exp_3v3",           .i2c_bus_index = 0, .i2c_slave_addr = 0x4f, .shunt_resistor_value = 0.010, .reg={}}
+    { .name = "exp_3v3",           .i2c_bus_index = 1, .i2c_slave_addr = 0x4f, .shunt_resistor_value = 0.010, .reg={}}
 };
 #endif /* EVMS_POWER_RAILS_H_ */
