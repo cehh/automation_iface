@@ -270,6 +270,14 @@ void bootModeI2C(char *mode)
     }
     out = (u8)strtol(word, NULL, 16);
     tca6424WriteBank(bank, out, i2c_gpio_bus[0]);
+
+    u8 read[3];
+
+    if (tca6424ReadAll(read, i2c_gpio_bus[0])) {
+        Display_printf("Unable to read sysboot settings");
+    } else {
+        Display_printf("Sysboot settings: 0x%02X%02X%02X", read[0], read[1], read[2]);
+    }
 }
 
 void reportError(char *message)
