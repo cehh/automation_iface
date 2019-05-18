@@ -519,14 +519,9 @@ void cleanup()
 {
     /* Deinitialized I2C */
     int index = 0;
-    while (i2c_power_bus[index] != NULL) {
-        I2C_close(i2c_power_bus[index]);
-        index++;
-    }
-    index=0;
-    while (i2c_gpio_bus[index] != NULL) {
-        I2C_close(i2c_gpio_bus[index]);
-        index++;
+    for(index = 0; index < MSP_EXP432P401R_I2CCOUNT; index++)
+    {
+        if(i2c_bus[index] != NULL)I2C_close(i2c_bus[index]);
     }
     Display_printf("I2C closed!\n");
 }
