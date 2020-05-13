@@ -136,6 +136,8 @@ void printHelp()
   printMsg(" mmc <l-microsd|r-microsd>\t\t\t:Connect to left/right uSD card");
   printMsg(" auto reset\t\t\t\t\t:Warm reset DUT");
   printMsg(" auto por\t\t\t\t\t:Power on reset DUT");
+  printMsg(" auto hold_por\t\t\t\t\t:Hold Power on reset DUT");
+  printMsg(" auto release_por\t\t\t\t:Release Power on reset DUT");
   printMsg(" auto power <on|off>\t\t\t\t:Power on|off DUT");
   printMsg(" auto sysboot <setting>\t\t\t\t:e.g. 110000");
   printMsg(" auto set dut <DUT type>\t\t\t:Initialize i2c for DUT");
@@ -236,6 +238,17 @@ void lowPulseKeepHigh(short pin)
     Task_sleep(10);
     digitalWrite(pin, HIGH);
     Task_sleep(100);
+}
+
+void holdPor(short pin)
+{
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+}
+
+void releasePor(short pin)
+{
+    pinMode(pin, INPUT_PULLUP);
 }
 
 /*
@@ -713,6 +726,14 @@ void *mainThread(void *arg0)
                 else if (startsWith(rbuffp, "por")) {
                     printMsg("Power-On-Reset on DUT");
                     lowPulseGpio(pinsMapping->auto_por);
+                }
+                else if (startsWith(rbuffp, "hold_por")) {
+                    printMsg("Holding Power-On-Reset on DUT");
+                    holdPor(pinsMapping->auto_por);
+                }
+                else if (startsWith(rbuffp, "release_por")) {
+                    printMsg("Releasing Power-On-Reset on DUT");
+                    releasePor(pinsMapping->auto_por);
                 }
                 else if (startsWith(rbuffp, "power ")) {
                     rbuffp += 6;
