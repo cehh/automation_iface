@@ -323,7 +323,7 @@ void setDutType(char *dut_name)
         rails = am654x_evm_rails;
         num_rails = ARRAY_SIZE(am654x_evm_rails);
     }
-    else if (strcmp("j721e-evm", dut_name) == 0 || strcmp("j721e-idk-gw", dut_name) == 0) {
+    else if (startsWith(dut_name, "j7")) {
         pinsMapping = &iface_v3_mappings;
         rails = j721e_evm_rails;
         num_rails = ARRAY_SIZE(j721e_evm_rails);

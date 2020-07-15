@@ -73,7 +73,7 @@ UART_Handle uart;
 I2C_Handle i2c_bus[2];
 I2C_Handle i2c_power_bus[2] = {NULL, NULL};
 I2C_Handle i2c_gpio_bus[2]  = {NULL, NULL};
-static char version[] = "automation interface v0.7";
+static char version[] = "automation interface v0.8";
 char echoPrompt[] = "=>\r\n";
 char max_len_msg[] = "Max string length reached, resetting ....\r\n";
 static int rBytes = 0;

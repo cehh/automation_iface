@@ -87,7 +87,7 @@ struct ina226_rail j721e_evm_rails[] = {
     { .name = "vdd_cpu_ram_0v85",  .i2c_bus_index = 0, .i2c_slave_addr = 0x47, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vdd_cpu_avs",       .i2c_bus_index = 0, .i2c_slave_addr = 0x48, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vddr_bias_1v1",     .i2c_bus_index = 0, .i2c_slave_addr = 0x49, .shunt_resistor_value = 0.010, .reg={}},
-    { .name = "vddr_ip_dv",        .i2c_bus_index = 0, .i2c_slave_addr = 0x4a, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vddr_io_dv",        .i2c_bus_index = 0, .i2c_slave_addr = 0x4a, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vdd_phycore_0v8",   .i2c_bus_index = 0, .i2c_slave_addr = 0x4b, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vda_pll_1v8",       .i2c_bus_index = 0, .i2c_slave_addr = 0x4c, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "vdd_phyio_1v8",     .i2c_bus_index = 0, .i2c_slave_addr = 0x4d, .shunt_resistor_value = 0.010, .reg={}},
