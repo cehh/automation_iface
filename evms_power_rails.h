@@ -111,4 +111,40 @@ struct ina226_rail j721e_evm_rails[] = {
     { .name = "vdda_dll_0v8",      .i2c_bus_index = 1, .i2c_slave_addr = 0x4e, .shunt_resistor_value = 0.010, .reg={}},
     { .name = "exp_3v3",           .i2c_bus_index = 1, .i2c_slave_addr = 0x4f, .shunt_resistor_value = 0.010, .reg={}}
 };
+
+struct ina226_rail j7200_evm_rails[] = {
+    { .name = "vdd_mcu_0v85",      .i2c_bus_index = 0, .i2c_slave_addr = 0x40, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_mcu_ram_0v85",  .i2c_bus_index = 0, .i2c_slave_addr = 0x41, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_mcu_1v8",       .i2c_bus_index = 0, .i2c_slave_addr = 0x42, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_mcuio_3v3",     .i2c_bus_index = 0, .i2c_slave_addr = 0x43, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_mcuio_1v8",     .i2c_bus_index = 0, .i2c_slave_addr = 0x44, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_core_0v8",      .i2c_bus_index = 0, .i2c_slave_addr = 0x45, .shunt_resistor_value = 0.005, .reg={}},
+    { .name = "vdd_core_ram_0v85", .i2c_bus_index = 0, .i2c_slave_addr = 0x46, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_cpu_ram_0v85",  .i2c_bus_index = 0, .i2c_slave_addr = 0x47, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_cpu_avs",       .i2c_bus_index = 0, .i2c_slave_addr = 0x48, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vddr_bias_1v1",     .i2c_bus_index = 0, .i2c_slave_addr = 0x49, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vddr_io_dv",        .i2c_bus_index = 0, .i2c_slave_addr = 0x4a, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_phycore_0v8",   .i2c_bus_index = 0, .i2c_slave_addr = 0x4b, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_pll_1v8",       .i2c_bus_index = 0, .i2c_slave_addr = 0x4c, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_phyio_1v8",     .i2c_bus_index = 0, .i2c_slave_addr = 0x4d, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vda_usb_3v3",       .i2c_bus_index = 0, .i2c_slave_addr = 0x4e, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "spare", .i2c_bus_index = 0, .i2c_slave_addr = 0x4f, .shunt_resistor_value = 0.010, .reg={}},
+
+    { .name = "vdd_io_1v8",        .i2c_bus_index = 1, .i2c_slave_addr = 0x40, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_io_3v3",        .i2c_bus_index = 1, .i2c_slave_addr = 0x41, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd_sd_dv",         .i2c_bus_index = 1, .i2c_slave_addr = 0x42, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd1",              .i2c_bus_index = 1, .i2c_slave_addr = 0x43, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vdd2",              .i2c_bus_index = 1, .i2c_slave_addr = 0x44, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vddq_lpddr4_dv",    .i2c_bus_index = 1, .i2c_slave_addr = 0x45, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vsys_mcuio_1v8",    .i2c_bus_index = 1, .i2c_slave_addr = 0x46, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vsys_mcuio_3v3",    .i2c_bus_index = 1, .i2c_slave_addr = 0x47, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vsys_io_1v8",       .i2c_bus_index = 1, .i2c_slave_addr = 0x48, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vsys_io_3v3",       .i2c_bus_index = 1, .i2c_slave_addr = 0x49, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vcc_12v0",          .i2c_bus_index = 1, .i2c_slave_addr = 0x4a, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vsys_5v0",          .i2c_bus_index = 1, .i2c_slave_addr = 0x4b, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vsys_3v3",          .i2c_bus_index = 1, .i2c_slave_addr = 0x4c, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "vsys_3v3_som",      .i2c_bus_index = 1, .i2c_slave_addr = 0x4d, .shunt_resistor_value = 0.001, .reg={}},
+    { .name = "vdda_dll_0v8",      .i2c_bus_index = 1, .i2c_slave_addr = 0x4e, .shunt_resistor_value = 0.010, .reg={}},
+    { .name = "exp_3v3",           .i2c_bus_index = 1, .i2c_slave_addr = 0x4f, .shunt_resistor_value = 0.010, .reg={}}
+};
 #endif /* EVMS_POWER_RAILS_H_ */
